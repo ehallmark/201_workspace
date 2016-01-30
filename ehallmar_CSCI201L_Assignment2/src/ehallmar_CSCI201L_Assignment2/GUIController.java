@@ -16,12 +16,19 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.Scanner;
+import java.util.zip.DataFormatException;
 
 import javax.swing.AbstractButton;
+import javax.swing.JButton;
+import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
+import javax.swing.JLabel;
 import javax.swing.JMenu;
 import javax.swing.JMenuBar;
 import javax.swing.JMenuItem;
@@ -31,42 +38,59 @@ import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
 import javax.swing.KeyStroke;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.UIManager;
 import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.undo.UndoManager;
 
+import ehallmar_CSCI201L_Assignment1.Controller;
+
 public class GUIController  extends JFrame {
 	private static final long serialVersionUID = 1L;
 	
 	private LinkedList<File> files;
-	public LinkedList<JTextArea> tabs_text;
-	public JTabbedPane tabbed_pane;
-	public JMenuBar menu_bar;
-	public UndoManager undo_manager;
+	private LinkedList<JTextArea> tabs_text;
+	private JTabbedPane tabbed_pane;
+	private JMenuBar menu_bar;
+	private UndoManager undo_manager;
 	private static final String NEW_FILE_NAME = "new";
+	private static final String DEFAULT_KEYBOARD_FILE_NAME = "querty-us.kb";
+	private static final String DEFAULT_WORDLIST_FILE_NAME = "wordlist.wl";
+	private String keyboard_file_name;
+	private String wordlist_file_name; 
+	private JPanel spell_check_sidebar;
 	
 	public GUIController() {
 		files = new LinkedList<File>();
 		tabs_text = new LinkedList<JTextArea>();
 		undo_manager = new UndoManager();
+	
+		// Set defaults for SpellCheck
+		keyboard_file_name = DEFAULT_KEYBOARD_FILE_NAME;
+		wordlist_file_name = DEFAULT_WORDLIST_FILE_NAME;
+		// Generate UI
 		generateUI();
+		// Display
 		setVisible(true);
+		validate();
 	}
 	
 	private void createTab(File file) {
 		JPanel new_tab = new JPanel();
 		new_tab.setLayout(new BorderLayout());
 		JTextArea text_area = new JTextArea();
+		JScrollPane scroll_pane = new JScrollPane(text_area);
 		text_area.getDocument().addUndoableEditListener(undo_manager);
-		new_tab.add(text_area, BorderLayout.CENTER);
-		tabs_text.add(text_area);
+		new_tab.add(scroll_pane, BorderLayout.CENTER);
+		scroll_pane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
 		String tab_name = NEW_FILE_NAME;
 		if(file != null) { 
 			// Open file
 			tab_name = file.getName();
 		}
 		files.add(file);
+		tabs_text.add(text_area);
 		tabbed_pane.add(tab_name, new_tab);
 		tabbed_pane.setSelectedIndex(tabs_text.size()-1);
 	}
@@ -92,6 +116,15 @@ public class GUIController  extends JFrame {
 	    if(file_chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
 	    	// create new tab
 	    	File file = file_chooser.getSelectedFile();
+	    	// check for previously open tab
+	    	for(File f: files) {
+	    		if(file.equals(f)){
+	    			// Uh oh
+	    			JOptionPane.showMessageDialog(this, "Cannot perform action\n"+file.getName()+" already open.",
+	    					"File already open...", JOptionPane.WARNING_MESSAGE);
+	    			return;
+	    		}
+	    	}
 	    	createTab(file);
 	    	String text = "";
 	    	Scanner scanner = null;
@@ -367,11 +400,91 @@ public class GUIController  extends JFrame {
 		menu_bar.add(edit_menu);
 	}
 	
+	private void openSpellCheckWindow() {
+		JPanel panel = (JPanel) (tabbed_pane.getSelectedComponent());
+		panel.add(spell_check_sidebar,BorderLayout.EAST);
+		validate();
+	}
+	
+	private void closeSpellCheckWindow() {
+		JPanel panel = (JPanel) (tabbed_pane.getSelectedComponent());
+		panel.remove(spell_check_sidebar);
+		validate();
+	}
+	
+	private void spellCheckHelper(String text) {
+		Hashtable<String, ArrayList<String>> word_corrections = null;
+		try {
+			word_corrections = Controller.spellCheck(wordlist_file_name,keyboard_file_name,text);
+			System.out.println(word_corrections.toString());
+		} catch (FileNotFoundException e) {
+			// File not found
+			JOptionPane.showMessageDialog(this, "Cannot perform action\nProblem finding configuration files.",
+					"File not found...", JOptionPane.ERROR_MESSAGE);
+			return;
+		} catch (IOException e) {
+			// Error reading from file
+			JOptionPane.showMessageDialog(this, "Cannot perform action\nInvalid configuration files.",
+					"Error reading file...", JOptionPane.ERROR_MESSAGE);
+			return;
+		} catch (DataFormatException e) {
+			// In valid file format
+			JOptionPane.showMessageDialog(this, "Cannot perform action\nMissing files or incorrect file extensions.",
+					"Configuration Error...", JOptionPane.ERROR_MESSAGE);
+			return;
+		}
+		openSpellCheckWindow();
+		
+	}
+	
+	private void initSpellCheckMenu() {
+		// create spell check menu
+		JMenu spellcheck_menu = new JMenu("SpellCheck");
+		spellcheck_menu.setMnemonic(KeyEvent.VK_S);
+		
+		// spell check sidebar
+		spell_check_sidebar = new JPanel();
+		spell_check_sidebar.setLayout(new BorderLayout());
+		spell_check_sidebar.add(new JLabel("Spell Check"), BorderLayout.NORTH);
+		JButton close = new JButton("Close");
+		spell_check_sidebar.add(close, BorderLayout.SOUTH);
+		// set up close action
+		close.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				closeSpellCheckWindow();
+			}
+        });	
+		
+		// run button
+		JMenuItem run_button = new JMenuItem("Run");
+		spellcheck_menu.add(run_button);
+		
+		// copy button accelerator (F7)
+		run_button.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F7,0));
+		
+		// copy button action
+		run_button.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (!tabs_text.isEmpty()) {
+					JTextArea current = tabs_text.get(tabbed_pane.getSelectedIndex());
+					spellCheckHelper(current.getText());
+				}
+			}
+        });
+		
+		
+		// Apply the menu
+		menu_bar.add(spellcheck_menu);
+	}
+	
 	private void generateUI() {
 		menu_bar = new JMenuBar();
 		setJMenuBar(menu_bar);
 		initFileMenu();
 		initEditMenu();
+		initSpellCheckMenu();
 		initTabbedPane();
         setTitle("Evan's Text Editor");
         setSize(600, 400);

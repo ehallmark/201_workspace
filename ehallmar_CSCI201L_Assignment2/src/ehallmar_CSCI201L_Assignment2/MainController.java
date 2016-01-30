@@ -1,11 +1,9 @@
 package ehallmar_CSCI201L_Assignment2;
 
-import java.awt.EventQueue;
 import javax.swing.UIManager;
 
 public class MainController {
 	
-
 	public static void main(String[] args) {
 		try {
 			UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());
@@ -14,7 +12,6 @@ public class MainController {
 		}	
     	GUIController controller = new GUIController();
         controller.setVisible(true);
-
 	}
 
 }
