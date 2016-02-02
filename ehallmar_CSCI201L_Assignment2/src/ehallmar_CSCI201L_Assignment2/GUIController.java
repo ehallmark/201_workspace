@@ -2,39 +2,24 @@ package ehallmar_CSCI201L_Assignment2;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
-import java.awt.Container;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
+import java.awt.Font;
 import java.awt.GridLayout;
-import java.awt.Panel;
-import java.awt.Toolkit;
-import java.awt.datatransfer.Clipboard;
-import java.awt.datatransfer.StringSelection;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.Scanner;
-import java.util.Vector;
 import java.util.zip.DataFormatException;
 
-import javax.swing.AbstractButton;
 import javax.swing.BorderFactory;
-import javax.swing.BoxLayout;
-import javax.swing.ButtonGroup;
-import javax.swing.GroupLayout;
-import javax.swing.GroupLayout.SequentialGroup;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
-import javax.swing.JDialog;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -46,11 +31,9 @@ import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
 import javax.swing.JTextArea;
-import javax.swing.JWindow;
 import javax.swing.KeyStroke;
 import javax.swing.ScrollPaneConstants;
-import javax.swing.UIManager;
-import javax.swing.border.Border;
+import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.BadLocationException;
@@ -65,35 +48,32 @@ public class GUIController  extends JFrame {
 	private static final long serialVersionUID = 1L;
 	
 	private LinkedList<File> files;
-	private LinkedList<JTextArea> tabs_text;
-	private JTabbedPane tabbed_pane;
+	private static LinkedList<JTextArea> tabs_text;
+	static JTabbedPane tabbed_pane;
 	private JMenuBar menu_bar;
 	private UndoManager undo_manager;
 	private static final String NEW_FILE_NAME = "new";
-	private static final String DEFAULT_KEYBOARD_FILE_NAME = "querty-us.kb";
-	private static final String DEFAULT_WORDLIST_FILE_NAME = "wordlist.wl";
-	private String keyboard_file_name;
-	private String wordlist_file_name; 
-	private LinkedList<SpellCheckContainer> spell_check_containers;
-
+	static final String DEFAULT_KEYBOARD_FILE_NAME = "querty-us.kb";
+	static final String DEFAULT_WORDLIST_FILE_NAME = "wordlist.wl";
+	static File keyboard_file = new File(DEFAULT_KEYBOARD_FILE_NAME);;
+	static File wordlist_file = new File(DEFAULT_WORDLIST_FILE_NAME);
+	private static LinkedList<SpellCheckContainer> spell_check_containers;
+	private static ConfigureWindow config_menu = new ConfigureWindow();
+	static boolean inConfig = false;
 	
 	public GUIController() {
 		files = new LinkedList<File>();
 		tabs_text = new LinkedList<JTextArea>();
 		spell_check_containers = new LinkedList<SpellCheckContainer>();
-		
 		undo_manager = new UndoManager();
-	
-		// Set defaults for SpellCheck
-		keyboard_file_name = DEFAULT_KEYBOARD_FILE_NAME;
-		wordlist_file_name = DEFAULT_WORDLIST_FILE_NAME;
+		
 		// Generate UI
 		generateUI();
 		// Display
 		setVisible(true);
 		validate();
 	}
-	
+		
 	private void createTab(File file) {
 		JPanel new_tab = new JPanel();
 		new_tab.setLayout(new BorderLayout());
@@ -117,10 +97,10 @@ public class GUIController  extends JFrame {
 	
 	private void closeTab(int tab_index) {
 		if(tab_index >= 0) {
-			tabbed_pane.remove(tab_index);
 			tabs_text.remove(tab_index);
 			files.remove(tab_index);
 			spell_check_containers.remove(tab_index);
+			tabbed_pane.remove(tab_index);
 		}
 	}
 	
@@ -134,9 +114,10 @@ public class GUIController  extends JFrame {
 		file_chooser.setName("Open File...");
 		file_chooser.setAcceptAllFileFilterUsed(false);
 		file_chooser.setFileFilter(new FileNameExtensionFilter("txt files (*.txt)", "txt"));
-	    if(file_chooser.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+	    if(file_chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
 	    	// create new tab
 	    	File file = file_chooser.getSelectedFile();
+	    	if(!file.getName().endsWith(".txt")) { return; }
 	    	// check for previously open tab
 	    	for(File f: files) {
 	    		if(file.equals(f)){
@@ -297,6 +278,14 @@ public class GUIController  extends JFrame {
 	
 	private void initTabbedPane() {
 		tabbed_pane = new JTabbedPane();
+		// switch config menu based on tab change if open
+		tabbed_pane.addChangeListener(new ChangeListener() {
+	        public void stateChanged(ChangeEvent e) {
+	        	if(inConfig) {
+	        		openConfigMenu();
+	        	}
+	        }
+	    });
 		add(tabbed_pane, BorderLayout.CENTER);
 	}
 	
@@ -422,28 +411,56 @@ public class GUIController  extends JFrame {
 	}
 	
 	private void openSpellCheckWindow() {
+		if(inConfig) {
+			closeConfigMenu();
+		}
 		JPanel panel = (JPanel) (tabbed_pane.getSelectedComponent());
 		panel.add(spell_check_containers.get(tabbed_pane.getSelectedIndex()).sidebar,BorderLayout.EAST);
-		tabs_text.get(tabbed_pane.getSelectedIndex()).setEditable(false);
+		JTextArea text_area = tabs_text.get(tabbed_pane.getSelectedIndex());
+		text_area.setEditable(false);
+		text_area.getHighlighter().removeAllHighlights();
 		validate();
 	}
 	
-	private void closeSpellCheckWindow() {
+	static void closeSpellCheckWindow() {
 		JPanel panel = (JPanel) (tabbed_pane.getSelectedComponent());
 		panel.remove(spell_check_containers.get(tabbed_pane.getSelectedIndex()).sidebar);
 		JTextArea text_area = tabs_text.get(tabbed_pane.getSelectedIndex());
 		text_area.setEditable(true);
 		text_area.getHighlighter().removeAllHighlights();
-		validate();
+		tabbed_pane.getParent().validate();
+	}
+	
+	static void openConfigMenu() {
+		closeSpellCheckWindow();
+		inConfig = true;
+		JPanel panel = (JPanel) (tabbed_pane.getSelectedComponent());
+		panel.add(config_menu,BorderLayout.EAST);
+		tabbed_pane.getParent().validate();
+	}
+	
+	static void closeConfigMenu() {
+		JPanel panel = (JPanel) (config_menu.getParent());
+		panel.remove(config_menu);
+		inConfig = false;
+		tabbed_pane.getParent().validate();
 	}
 	
 	private void spellCheckHelper(String text) {
-		Hashtable<String, ArrayList<String>> word_corrections = null;
+		if(text.replaceAll("\\s", "").length()==0) {
+			JOptionPane.showMessageDialog(this, "No words to check!", "SpellCheck complete...", JOptionPane.INFORMATION_MESSAGE);
+			closeSpellCheckWindow();
+			return;
+		}
+		SpellCheckContainer spell_check_container = spell_check_containers.get(tabbed_pane.getSelectedIndex());
 		openSpellCheckWindow();
+		// check to make sure there are words to check
+	    String[] words = text.split("\\s");
+	    spell_check_container.words = words;
+	    spell_check_container.text = text;
 		// try to get word corrections from spell checker
 		try {
-			word_corrections = Controller.spellCheck(wordlist_file_name,keyboard_file_name,text);
-			System.out.println(word_corrections.toString());
+			spell_check_container.word_corrections = Controller.spellCheck(wordlist_file.getAbsolutePath(),keyboard_file.getAbsolutePath(),text);
 		} catch (FileNotFoundException e) {
 			// File not found
 			JOptionPane.showMessageDialog(this, "Cannot perform action\nProblem finding configuration files.",
@@ -459,84 +476,53 @@ public class GUIController  extends JFrame {
 			JOptionPane.showMessageDialog(this, "Cannot perform action\nMissing files or incorrect file extensions.",
 					"Configuration Error...", JOptionPane.ERROR_MESSAGE);
 			return;
-		}
-		SpellCheckContainer spell_check_container = spell_check_containers.get(tabbed_pane.getSelectedIndex());
-		spell_check_container.word_corrections = word_corrections;
-		JLabel word_label = spell_check_container.word_label;
-		JComboBox<String> selections = spell_check_container.combo_box;
-		JButton change_button = spell_check_container.change_button;
-		JButton ignore_button = spell_check_container.ignore_button;
-		JButton add_button = spell_check_container.add_button;
-	    Highlighter highlight = spell_check_container.highlight;
-	    HighlightPainter highlighter = spell_check_container.highlighter;
-		JTextArea text_area = tabs_text.get(tabbed_pane.getSelectedIndex());
-
-	    String[] words = text.split("\\s");
-	    spell_check_container.words = words;
-
-		add_button.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				if (!tabs_text.isEmpty()) {
-					SpellCheckContainer sp_container = spell_check_containers.get(tabbed_pane.getSelectedIndex()); 
-					int next_word = sp_container.min_index;
-					while(next_word == sp_container.min_index && sp_container.word_index<words.length) {
-						next_word = nextWordCorrection(sp_container.word_corrections, sp_container.min_index, word_label, highlight, highlighter,
-								text_area, selections, text, sp_container.word_index, words);
-						sp_container.word_index++;
-					}
-					sp_container.min_index = next_word;	
-					if(sp_container.word_index>=words.length) {
-						closeSpellCheckWindow();
-					}
-				}
-			}
-        });
+		}		
+		System.out.println(spell_check_container.word_corrections.toString());
 		
-		// begin running
-		int next_word = 0;
-		while(next_word == spell_check_container.min_index && spell_check_container.word_index<words.length) {
-			next_word = nextWordCorrection(word_corrections, spell_check_container.min_index, word_label, highlight, highlighter,
-					text_area, selections, text, spell_check_container.word_index, words);
+		// lets get it goin'
+		int next_word = spell_check_container.min_index;
+		while(next_word == spell_check_container.min_index && spell_check_container.word_index<spell_check_container.words.length) {
+			nextWordCorrection(spell_check_container,
+					tabs_text.get(tabbed_pane.getSelectedIndex()));
 			spell_check_container.word_index++;
 		}
-		spell_check_container.min_index=next_word;
-
+		
+		if(next_word==spell_check_container.min_index) {
+			JOptionPane.showMessageDialog(this, "All words spelled correctly!", "SpellCheck complete...", JOptionPane.INFORMATION_MESSAGE);
+			closeSpellCheckWindow();
+		}
 	}
 	
-	private int nextWordCorrection(Hashtable<String, ArrayList<String>> word_corrections, int min_index, JLabel word_label, 
-			Highlighter highlight, HighlightPainter highlighter, JTextArea text_area, JComboBox<String> selections,
-			String text, int word_index, String[] words) 
-	{
-		String word = null;
-		if (word_index<words.length) { 
-			word = words[word_index];
+	void nextWordCorrection(SpellCheckContainer sp_container, JTextArea text_area) 
+	{	
+		String word = null; 
+		if (sp_container.word_index<sp_container.words.length) { 
+			word = sp_container.words[sp_container.word_index];
 		} 
-		if(word!=null && word_corrections.containsKey(word.toLowerCase())) {
-			word_label.setText("Spelling: "+word);
-			selections.removeAllItems();
-			min_index=text.indexOf(word,min_index);
-			
-			// standardize index to textarea size
-			min_index+= (text_area.getText().length()-text.length());
-			
-			int max_index = min_index+word.length();
-			for(String suggestion: word_corrections.get(word.toLowerCase())) {
-				selections.addItem(suggestion);
+		if(word!=null && sp_container.word_corrections.containsKey(word.toLowerCase())) {
+			sp_container.word_label.setText("Spelling: "+word);
+			sp_container.combo_box.removeAllItems();
+			// make sure we get the whole word and not a prefix
+			sp_container.min_index=sp_container.text.indexOf(" "+word+" ",sp_container.min_index)+1;
+			// fallback
+			if(sp_container.min_index<=0) {
+				sp_container.min_index=sp_container.text.indexOf(word,sp_container.min_index);
+			}
+			int max_index = sp_container.min_index+word.length();
+			for(String suggestion: sp_container.word_corrections.get(word.toLowerCase())) {
+				sp_container.combo_box.addItem(suggestion);
 			}
 			// unhighlight previous words
-			highlight.removeAllHighlights();
+			sp_container.highlight.removeAllHighlights();
 			// highlight word
 			try {
-				highlight.addHighlight(min_index, max_index, highlighter);
+				sp_container.highlight.addHighlight(sp_container.min_index, max_index, sp_container.highlighter);
 			} catch (BadLocationException e) {
 				// text no longer exists- keep going
 			}
-			min_index = max_index;
+			sp_container.min_index++;
 			revalidate();
 		}
-		return min_index;
-
 	}
 	
 	private void initSpellCheckTab() {
@@ -544,15 +530,28 @@ public class GUIController  extends JFrame {
 		JPanel spell_check_sidebar = new JPanel();
 		spell_check_sidebar.setLayout(new BorderLayout());
 		JLabel spell_check_label = new JLabel("Spelling: ");
+		Font font = spell_check_label.getFont();
+		spell_check_label.setFont(font.deriveFont((float)18));
 		JButton add_button = new JButton("Add");
 		JButton ignore_button = new JButton("Ignore");
 		JComboBox<String> combo_box = new JComboBox<String>();
 		JButton change_button = new JButton("Change");
 	    Highlighter highlight = tabs_text.get(tabbed_pane.getSelectedIndex()).getHighlighter();
 	    HighlightPainter highlighter = new DefaultHighlighter.DefaultHighlightPainter(Color.CYAN);
-		spell_check_containers.add(new SpellCheckContainer(spell_check_sidebar, change_button, 
+	    JTextArea text_area = tabs_text.get(tabbed_pane.getSelectedIndex());
+		SpellCheckContainer spell_check_container = new SpellCheckContainer(spell_check_sidebar, change_button, 
 				ignore_button, add_button, null, spell_check_label,
-				combo_box, highlight, highlighter, null));
+				combo_box, highlight, highlighter, null);
+		spell_check_containers.add(spell_check_container);
+
+	    // Add button functionality
+		add_button.addActionListener(new AddButtonListener(this,spell_check_container,text_area));
+		// Ignore button functionality
+		ignore_button.addActionListener(new IgnoreButtonListener(this,spell_check_container,text_area));
+		// Change button functionality
+		change_button.addActionListener(new ChangeButtonListener(this,spell_check_container,text_area));
+		
+		// rest of spell check layout
 		JPanel main_panel = new JPanel();
 		JPanel second_row = new JPanel();
 		JPanel third_row = new JPanel();
@@ -603,21 +602,51 @@ public class GUIController  extends JFrame {
 		JMenuItem run_button = new JMenuItem("Run");
 		spellcheck_menu.add(run_button);
 		
-		// copy button accelerator (F7)
+		// run button accelerator (F7)
 		run_button.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F7,0));
 		
-		// copy button action
+		// run button action
 		run_button.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (!tabs_text.isEmpty()) {
 					JTextArea current = tabs_text.get(tabbed_pane.getSelectedIndex());
+					//reset this tabs spell check container
+					SpellCheckContainer spell_check_container = spell_check_containers.get(tabbed_pane.getSelectedIndex());
+					spell_check_container.word_index = 0;
+					spell_check_container.min_index = 0;
+					spell_check_container.word_corrections = null;
+					spell_check_container.words = null;
+					spell_check_container.text = null;
+					spell_check_container.word_label.setText("Spelling: ");
+					spell_check_container.combo_box.removeAllItems();
 					spellCheckHelper(current.getText());
+				} else {
+	    			JOptionPane.showMessageDialog(GUIController.tabbed_pane, "Cannot perform action\nMust have a tab open.",
+	    					"No tab open...", JOptionPane.WARNING_MESSAGE);
 				}
 			}
         });
 		
+		// configure tab
+		ConfigureWindow config_window = new ConfigureWindow();
+		JMenuItem config_button = new JMenuItem("Configure");
+		config_button.setMnemonic(KeyEvent.VK_C);
+		spellcheck_menu.add(config_button);
 		
+		// config button action
+		config_button.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				if (!tabs_text.isEmpty()) {
+					openConfigMenu();
+				} else {
+	    			JOptionPane.showMessageDialog(GUIController.tabbed_pane, "Cannot perform action\nMust have a tab open.",
+	    					"No tab open...", JOptionPane.WARNING_MESSAGE);
+				}
+			}
+        });
+				
 		// Apply the menu
 		menu_bar.add(spellcheck_menu);
 	}

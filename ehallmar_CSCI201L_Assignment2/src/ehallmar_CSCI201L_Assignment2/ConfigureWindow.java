@@ -1,0 +1,113 @@
+package ehallmar_CSCI201L_Assignment2;
+
+import java.awt.BorderLayout;
+import java.awt.Component;
+import java.awt.Container;
+import java.awt.GridLayout;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JFileChooser;
+import javax.swing.JLabel;
+import javax.swing.JPanel;
+import javax.swing.border.Border;
+import javax.swing.filechooser.FileNameExtensionFilter;
+
+public class ConfigureWindow extends JPanel {
+	private static final long serialVersionUID = 1L;
+	public String word_file;
+	public String keyboard_file;
+	public JButton close_button;
+	public JButton select_keyboard_file;
+	public JButton select_word_file;
+	public JLabel word_file_label;
+	public JLabel keyboard_file_label;
+	
+	ConfigureWindow() {
+		// Spell check configure window stream of consciousness
+		setLayout(new BorderLayout());
+		close_button = new JButton("Close");
+		select_keyboard_file = new JButton("Select Keyboard...");
+		select_word_file = new JButton("Select WordList...");
+		word_file_label = new JLabel(GUIController.wordlist_file.getName());
+		keyboard_file_label = new JLabel(GUIController.keyboard_file.getName());
+		// word list stuff
+		JPanel w_holder = new JPanel();
+		w_holder.setLayout(new GridLayout(2,1));
+		w_holder.add(word_file_label);
+		w_holder.add(select_word_file);
+		// keyboard file stuff
+		JPanel kb_holder = new JPanel();
+		kb_holder.setLayout(new GridLayout(2,1));
+		kb_holder.add(keyboard_file_label);
+		kb_holder.add(select_keyboard_file);
+		// border
+		setBorder(BorderFactory.createTitledBorder("Configure"));
+		// setup
+		JPanel bottom = new JPanel();
+		JPanel top = new JPanel();
+		bottom.setLayout(new GridLayout(1,2));
+		bottom.add(close_button);
+		bottom.add(new JPanel());
+		add(new JPanel(), BorderLayout.CENTER);
+		add(bottom, BorderLayout.SOUTH);
+		GridLayout grid = new GridLayout(2,1);
+		grid.setVgap(10);
+		top.setLayout(grid);
+		top.add(w_holder);
+		top.add(kb_holder);
+		add(top,BorderLayout.NORTH);
+		
+		// configure close button
+		close_button.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				GUIController.closeConfigMenu();
+			}
+        });	
+		
+		// configure keyboard file button
+		select_keyboard_file.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// Open file chooser
+				JFileChooser file_chooser = new JFileChooser();
+				file_chooser.setName("Open File...");
+				file_chooser.setAcceptAllFileFilterUsed(false);
+				file_chooser.setFileFilter(new FileNameExtensionFilter("kb files (*.kb)", "kb"));
+			    if(file_chooser.showOpenDialog(GUIController.tabbed_pane) == JFileChooser.APPROVE_OPTION) {
+			    	File file = file_chooser.getSelectedFile();
+			    	// double check extension
+			    	if(!file.getName().endsWith(".kb")) { return; }
+			    	// set file
+			    	GUIController.keyboard_file =  file_chooser.getSelectedFile();
+			    	keyboard_file_label.setText(GUIController.keyboard_file.getName());
+			    }
+			}
+        });	
+		
+		// configure keyboard file button
+		select_word_file.addActionListener(new ActionListener() {
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				// Open file chooser
+				JFileChooser file_chooser = new JFileChooser();
+				file_chooser.setName("Open File...");
+				file_chooser.setAcceptAllFileFilterUsed(false);
+				file_chooser.setFileFilter(new FileNameExtensionFilter("wl files (*.wl)", "wl"));
+			    if(file_chooser.showOpenDialog(GUIController.tabbed_pane) == JFileChooser.APPROVE_OPTION) {
+			    	File file = file_chooser.getSelectedFile();
+			    	// double check extension
+			    	if(!file.getName().endsWith(".wl")) { return; }
+			    	// set file
+			    	GUIController.wordlist_file =  file;
+			    	word_file_label.setText(GUIController.wordlist_file.getName());
+			    }
+			}
+        });	
+	}
+
+}

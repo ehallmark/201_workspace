@@ -16,17 +16,18 @@ public class SpellCheckContainer  {
 	public JButton add_button;
 	public Hashtable<String, ArrayList<String>> word_corrections;
 	public JLabel word_label;
-	public JComboBox combo_box;
+	public JComboBox<String> combo_box;
 	public Highlighter highlight;
 	public HighlightPainter highlighter;
 	public String[] words;
 	public JPanel sidebar;
 	public int min_index;
 	public int word_index;
+	public String text;
 	
 	SpellCheckContainer(JPanel _sidebar, JButton _change, JButton _ignore, JButton _add, 
 			Hashtable<String, ArrayList<String>> _corrections, JLabel _label,
-			JComboBox _combo, Highlighter _highlight, HighlightPainter _highlighter,
+			JComboBox<String> _combo, Highlighter _highlight, HighlightPainter _highlighter,
 			String[] _words) {
 		change_button = _change;
 		ignore_button = _ignore;
@@ -40,6 +41,7 @@ public class SpellCheckContainer  {
 		sidebar = _sidebar;
 		min_index = 0;
 		word_index = 0;
+		text = null;
 	}
 
 }
