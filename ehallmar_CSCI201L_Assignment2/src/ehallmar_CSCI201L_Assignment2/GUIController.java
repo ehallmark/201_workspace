@@ -137,8 +137,10 @@ public class GUIController  extends JFrame {
 		    	}
 		    	tabs_text.getLast().setText(text);
 			} catch (FileNotFoundException e) {
-				System.out.println("Error reading in file: "+file.getAbsolutePath());
-				System.out.println(e.getMessage());
+    			// Uh oh
+    			JOptionPane.showMessageDialog(this, "Cannot perform action\n"+file.getName()+" not found.",
+    					"File not found...", JOptionPane.ERROR_MESSAGE);
+    			return;
 			} finally {
 				if(scanner!=null) scanner.close();
 			}
@@ -190,17 +192,15 @@ public class GUIController  extends JFrame {
 			writer.write(text.getText());
 			tabbed_pane.setTitleAt(tabbed_pane.getSelectedIndex(), file.getName());			
 		} catch (IOException e) {
-			System.out.println("Error writing to file: "+filename);
-			System.out.println(e.getMessage());
+			JOptionPane.showMessageDialog(this, "Cannot perform action\nError writing to file.",
+					"Error...", JOptionPane.ERROR_MESSAGE);
 		} finally {
 			if(writer != null) {
 				try {
 					writer.close();
 				} catch (IOException e) {
-					if(filename!=null) {
-						System.out.println("Error closing file: "+filename);
-					}
-					System.out.println(e.getMessage());
+					JOptionPane.showMessageDialog(this, "Cannot perform action\nError closing file.",
+							"Error...", JOptionPane.ERROR_MESSAGE);
 				}
 			}
 		}
@@ -477,7 +477,6 @@ public class GUIController  extends JFrame {
 					"Configuration Error...", JOptionPane.ERROR_MESSAGE);
 			return;
 		}		
-		System.out.println(spell_check_container.word_corrections.toString());
 		
 		// lets get it goin'
 		int next_word = spell_check_container.min_index;
@@ -503,7 +502,9 @@ public class GUIController  extends JFrame {
 			sp_container.word_label.setText("Spelling: "+word);
 			sp_container.combo_box.removeAllItems();
 			// make sure we get the whole word and not a prefix
-			sp_container.min_index=sp_container.text.indexOf(" "+word+" ",sp_container.min_index)+1;
+			if(!(sp_container.min_index==0 && sp_container.text.startsWith(word))) {
+				sp_container.min_index=sp_container.text.indexOf(" "+word+" ",Math.max(0,sp_container.min_index-1))+1;
+			}
 			// fallback
 			if(sp_container.min_index<=0) {
 				sp_container.min_index=sp_container.text.indexOf(word,sp_container.min_index);
