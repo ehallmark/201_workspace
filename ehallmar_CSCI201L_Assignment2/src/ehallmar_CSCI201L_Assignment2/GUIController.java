@@ -2,6 +2,7 @@ package ehallmar_CSCI201L_Assignment2;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.Component;
 import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
@@ -11,8 +12,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Hashtable;
 import java.util.LinkedList;
 import java.util.Scanner;
 import java.util.zip.DataFormatException;
@@ -47,11 +46,7 @@ import ehallmar_CSCI201L_Assignment1.Controller;
 public class GUIController  extends JFrame {
 	private static final long serialVersionUID = 1L;
 	
-	private LinkedList<File> files;
-	private static LinkedList<JTextArea> tabs_text;
-	static JTabbedPane tabbed_pane;
-	private JMenuBar menu_bar;
-	private UndoManager undo_manager;
+	// static variables
 	private static final String NEW_FILE_NAME = "new";
 	static final String DEFAULT_KEYBOARD_FILE_NAME = "querty-us.kb";
 	static final String DEFAULT_WORDLIST_FILE_NAME = "wordlist.wl";
@@ -59,11 +54,12 @@ public class GUIController  extends JFrame {
 	static File wordlist_file = new File(DEFAULT_WORDLIST_FILE_NAME);
 	private static LinkedList<SpellCheckContainer> spell_check_containers;
 	private static ConfigureWindow config_menu = new ConfigureWindow();
+	static JTabbedPane tabbed_pane;
 	static boolean inConfig = false;
+	private static JMenuBar menu_bar;
+	private static UndoManager undo_manager;
 	
 	public GUIController() {
-		files = new LinkedList<File>();
-		tabs_text = new LinkedList<JTextArea>();
 		spell_check_containers = new LinkedList<SpellCheckContainer>();
 		undo_manager = new UndoManager();
 		
@@ -73,32 +69,51 @@ public class GUIController  extends JFrame {
 		setVisible(true);
 		validate();
 	}
+	
+	// main tab window class
+	private class TabWindow extends JPanel {
+		private static final long serialVersionUID = 1L;
+		JTextArea text_area;
+		File file;
+		
+		//Set up tab GUI
+		TabWindow(File f) {
+			file = f;
+			setLayout(new BorderLayout());
+			text_area = new JTextArea();
+			JScrollPane scroll_pane = new JScrollPane(text_area);
+			text_area.getDocument().addUndoableEditListener(undo_manager);
+			add(scroll_pane, BorderLayout.CENTER);
+			scroll_pane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+		}
+	}
+	
+	private TabWindow get_last_tab() {
+    	return (TabWindow) tabbed_pane.getComponentAt(tabbed_pane.getTabCount()-1);
+	}
+	
+	private static TabWindow get_current_tab() {
+    	return (TabWindow) tabbed_pane.getSelectedComponent();
+	}
 		
 	private void createTab(File file) {
-		JPanel new_tab = new JPanel();
-		new_tab.setLayout(new BorderLayout());
-		JTextArea text_area = new JTextArea();
-		JScrollPane scroll_pane = new JScrollPane(text_area);
-		text_area.getDocument().addUndoableEditListener(undo_manager);
-		new_tab.add(scroll_pane, BorderLayout.CENTER);
-		scroll_pane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+		// Instantiate new tab
+		TabWindow new_tab = new TabWindow(file);
+
 		String tab_name = NEW_FILE_NAME;
 		if(file != null) { 
-			// Open file
+			// Get opened file name
 			tab_name = file.getName();
 		}
-		files.add(file);
-		tabs_text.add(text_area);
+		
 		tabbed_pane.add(tab_name, new_tab);
-		tabbed_pane.setSelectedIndex(tabs_text.size()-1);
+		tabbed_pane.setSelectedIndex(tabbed_pane.getTabCount()-1);
 		// set up spellcheck menu for this tab
 		initSpellCheckTab();
 	}
 	
 	private void closeTab(int tab_index) {
 		if(tab_index >= 0) {
-			tabs_text.remove(tab_index);
-			files.remove(tab_index);
 			spell_check_containers.remove(tab_index);
 			tabbed_pane.remove(tab_index);
 		}
@@ -119,8 +134,9 @@ public class GUIController  extends JFrame {
 	    	File file = file_chooser.getSelectedFile();
 	    	if(!file.getName().endsWith(".txt")) { return; }
 	    	// check for previously open tab
-	    	for(File f: files) {
-	    		if(file.equals(f)){
+	    	for(Component c: tabbed_pane.getComponents()) {
+	    		TabWindow tab = (TabWindow) c;
+	    		if(file.equals(tab.file)){
 	    			// Uh oh
 	    			JOptionPane.showMessageDialog(this, "Cannot perform action\n"+file.getName()+" already open.",
 	    					"File already open...", JOptionPane.WARNING_MESSAGE);
@@ -135,7 +151,7 @@ public class GUIController  extends JFrame {
 		    	while(scanner.hasNextLine()) {
 		    		text+=scanner.nextLine()+'\n';
 		    	}
-		    	tabs_text.getLast().setText(text);
+		    	get_last_tab().text_area.setText(text);
 			} catch (FileNotFoundException e) {
     			// Uh oh
     			JOptionPane.showMessageDialog(this, "Cannot perform action\n"+file.getName()+" not found.",
@@ -164,14 +180,14 @@ public class GUIController  extends JFrame {
 	}
 	
 	private void saveFileHelper() {
-		if(tabs_text.isEmpty()) return; 
-		int tab_index = tabbed_pane.getSelectedIndex();
-		JTextArea text = tabs_text.get(tab_index);
+		if(tabbed_pane.getTabCount()<=0) return; 
+		TabWindow current_tab = get_current_tab();
+		JTextArea text = current_tab.text_area;
 		FileWriter writer = null;
 		String filename = null;
 		try {
 			// create new file helper
-			File file = createNewFileHelper(files.get(tab_index));	
+			File file = createNewFileHelper(current_tab.file);	
 			if (file == null) { return; }
 			filename = file.getAbsolutePath();
 			// make sure we have the .txt suffix
@@ -345,8 +361,8 @@ public class GUIController  extends JFrame {
 		cut_button.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if (!tabs_text.isEmpty()) {
-					JTextArea current = tabs_text.get(tabbed_pane.getSelectedIndex());
+				if (!(tabbed_pane.getTabCount()<=0)) {
+					JTextArea current = get_current_tab().text_area;
 					current.cut();
 				}
 			}
@@ -363,8 +379,8 @@ public class GUIController  extends JFrame {
 		copy_button.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if (!tabs_text.isEmpty()) {
-					JTextArea current = tabs_text.get(tabbed_pane.getSelectedIndex());
+				if (!(tabbed_pane.getTabCount()<=0)) {
+					JTextArea current = get_current_tab().text_area;
 					current.copy();
 				}
 			}
@@ -381,8 +397,8 @@ public class GUIController  extends JFrame {
 		paste_button.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if (!tabs_text.isEmpty()) {
-					JTextArea current = tabs_text.get(tabbed_pane.getSelectedIndex());
+				if (!(tabbed_pane.getTabCount()<=0)) {
+					JTextArea current = get_current_tab().text_area;
 					current.paste();
 				}
 			}
@@ -399,8 +415,8 @@ public class GUIController  extends JFrame {
 		select_all_button.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if (!tabs_text.isEmpty()) {
-					JTextArea current = tabs_text.get(tabbed_pane.getSelectedIndex());
+				if (!(tabbed_pane.getTabCount()<=0)) {
+					JTextArea current = get_current_tab().text_area;
 					current.selectAll();
 				}
 			}
@@ -414,20 +430,18 @@ public class GUIController  extends JFrame {
 		if(inConfig) {
 			closeConfigMenu();
 		}
-		JPanel panel = (JPanel) (tabbed_pane.getSelectedComponent());
-		panel.add(spell_check_containers.get(tabbed_pane.getSelectedIndex()).sidebar,BorderLayout.EAST);
-		JTextArea text_area = tabs_text.get(tabbed_pane.getSelectedIndex());
-		text_area.setEditable(false);
-		text_area.getHighlighter().removeAllHighlights();
+		TabWindow current_tab = get_current_tab();
+		current_tab.add(spell_check_containers.get(tabbed_pane.getSelectedIndex()).sidebar,BorderLayout.EAST);
+		current_tab.text_area.setEditable(false);
+		current_tab.text_area.getHighlighter().removeAllHighlights();
 		validate();
 	}
 	
 	static void closeSpellCheckWindow() {
-		JPanel panel = (JPanel) (tabbed_pane.getSelectedComponent());
-		panel.remove(spell_check_containers.get(tabbed_pane.getSelectedIndex()).sidebar);
-		JTextArea text_area = tabs_text.get(tabbed_pane.getSelectedIndex());
-		text_area.setEditable(true);
-		text_area.getHighlighter().removeAllHighlights();
+		TabWindow current_tab = get_current_tab();
+		current_tab.remove(spell_check_containers.get(tabbed_pane.getSelectedIndex()).sidebar);
+		current_tab.text_area.setEditable(true);
+		current_tab.text_area.getHighlighter().removeAllHighlights();
 		tabbed_pane.getParent().validate();
 	}
 	
@@ -482,7 +496,7 @@ public class GUIController  extends JFrame {
 		int next_word = spell_check_container.min_index;
 		while(next_word == spell_check_container.min_index && spell_check_container.word_index<spell_check_container.words.length) {
 			nextWordCorrection(spell_check_container,
-					tabs_text.get(tabbed_pane.getSelectedIndex()));
+					get_current_tab().text_area);
 			spell_check_container.word_index++;
 		}
 		
@@ -537,9 +551,9 @@ public class GUIController  extends JFrame {
 		JButton ignore_button = new JButton("Ignore");
 		JComboBox<String> combo_box = new JComboBox<String>();
 		JButton change_button = new JButton("Change");
-	    Highlighter highlight = tabs_text.get(tabbed_pane.getSelectedIndex()).getHighlighter();
+	    JTextArea text_area = get_current_tab().text_area;
+	    Highlighter highlight = text_area.getHighlighter();
 	    HighlightPainter highlighter = new DefaultHighlighter.DefaultHighlightPainter(Color.CYAN);
-	    JTextArea text_area = tabs_text.get(tabbed_pane.getSelectedIndex());
 		SpellCheckContainer spell_check_container = new SpellCheckContainer(spell_check_sidebar, change_button, 
 				ignore_button, add_button, null, spell_check_label,
 				combo_box, highlight, highlighter, null);
@@ -610,8 +624,8 @@ public class GUIController  extends JFrame {
 		run_button.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if (!tabs_text.isEmpty()) {
-					JTextArea current = tabs_text.get(tabbed_pane.getSelectedIndex());
+				if (!(tabbed_pane.getTabCount()<=0)) {
+					JTextArea current = get_current_tab().text_area;
 					//reset this tabs spell check container
 					SpellCheckContainer spell_check_container = spell_check_containers.get(tabbed_pane.getSelectedIndex());
 					spell_check_container.word_index = 0;
@@ -630,7 +644,6 @@ public class GUIController  extends JFrame {
         });
 		
 		// configure tab
-		ConfigureWindow config_window = new ConfigureWindow();
 		JMenuItem config_button = new JMenuItem("Configure");
 		config_button.setMnemonic(KeyEvent.VK_C);
 		spellcheck_menu.add(config_button);
@@ -639,7 +652,7 @@ public class GUIController  extends JFrame {
 		config_button.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if (!tabs_text.isEmpty()) {
+				if (!(tabbed_pane.getTabCount()<=0)) {
 					openConfigMenu();
 				} else {
 	    			JOptionPane.showMessageDialog(GUIController.tabbed_pane, "Cannot perform action\nMust have a tab open.",

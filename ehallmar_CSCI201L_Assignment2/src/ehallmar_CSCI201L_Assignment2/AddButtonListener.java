@@ -1,8 +1,12 @@
 package ehallmar_CSCI201L_Assignment2;
 
 import java.awt.event.ActionEvent;
+import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 
 import javax.swing.JOptionPane;
@@ -24,21 +28,14 @@ public class AddButtonListener extends IgnoreButtonListener {
 		word = text_area.getText().substring(start,end);
 		
 		// Add button functionality
-		FileWriter fw = null;
 		try {
-			fw = new FileWriter(GUIController.wordlist_file);
-			fw.append("\n"+word);
-			spell_check_container.word_corrections.remove(word);
+		    Files.write(Paths.get(GUIController.wordlist_file.getAbsolutePath()), ("\n"+word).getBytes(), StandardOpenOption.APPEND);
 		} catch (IOException e1) {
+		    // Error
 			JOptionPane.showMessageDialog(GUIController.tabbed_pane, "Cannot perform action\nError updating WordList file.",
 					"Error...", JOptionPane.ERROR_MESSAGE);
 		} finally {
-			try {
-				fw.close();
-			} catch (IOException e1) {
-				JOptionPane.showMessageDialog(GUIController.tabbed_pane, "Cannot perform action\nError closing WordList file.",
-						"Error...", JOptionPane.ERROR_MESSAGE);
-			}
+			spell_check_container.word_corrections.remove(word);
 		}
 		
 		// continue

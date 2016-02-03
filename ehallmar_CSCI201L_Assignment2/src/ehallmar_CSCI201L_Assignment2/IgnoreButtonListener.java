@@ -19,16 +19,18 @@ public class IgnoreButtonListener implements ActionListener {
 	
 	@Override
 	public void actionPerformed(ActionEvent e) {
+		// check if we are done
+		if(spell_check_container.words.length<=spell_check_container.word_index) {
+			// done
+			GUIController.closeSpellCheckWindow();
+			return;
+		}
+		
 		int next_word = spell_check_container.min_index;
 		while(next_word == spell_check_container.min_index && spell_check_container.word_index<spell_check_container.words.length) {
 			main_window.nextWordCorrection(spell_check_container,
 					text_area);
 			spell_check_container.word_index++;
-		}
-		// check if we are done
-		if(spell_check_container.words.length<=spell_check_container.word_index) {
-			// done
-			main_window.closeSpellCheckWindow();
 		}
 	}
 
