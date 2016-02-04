@@ -58,6 +58,14 @@ public class GUIController  extends JFrame {
 	static boolean inConfig = false;
 	private static JMenuBar menu_bar;
 	private static UndoManager undo_manager;
+	private static JMenuItem save_file_option;
+	private static JMenuItem config_option;
+	private static JMenuItem run_option;
+	private static JMenuItem select_all_option;
+	private static JMenuItem copy_option;
+	private static JMenuItem cut_option;
+	private static JMenuItem paste_option;
+	private static JMenuItem close_file_option;
 	
 	public GUIController() {
 		undo_manager = new UndoManager();
@@ -75,9 +83,16 @@ public class GUIController  extends JFrame {
 		JTextArea text_area;
 		File file;
 		SpellCheckSidebar spell_check_sidebar;
+		boolean is_config_window;
+		
+		// empty constructor
+		TabWindow() {
+			is_config_window = true;
+		}
 		
 		//Set up tab GUI
 		TabWindow(File f) {
+			is_config_window = false;
 			file = f;
 			setLayout(new BorderLayout());
 			text_area = new JTextArea();
@@ -291,12 +306,20 @@ public class GUIController  extends JFrame {
 	}
 		
 	private void createTab(File file) {
+		// check if config window is open
+		if(tabbed_pane.getTabCount() > 0) {
+			closeConfigMenu();
+		}
 		// Instantiate new tab
 		new TabWindow(file);
 	}
 	
 	private void closeTab(int tab_index) {
 		if(tab_index >= 0 && tab_index < tabbed_pane.getTabCount()) {
+			if(tabbed_pane.getTabCount() == 1 && inConfig) {
+				// check to see if config menu is open
+				closeConfigMenu();
+			}
 			tabbed_pane.remove(tab_index);
 		}
 	}
@@ -445,7 +468,7 @@ public class GUIController  extends JFrame {
         });
 		
 		// create save button
-		JMenuItem save_file_option = new JMenuItem("Save");
+	    save_file_option = new JMenuItem("Save");
 		file_menu.add(save_file_option);
 		
 		// save button accelerator (control-s)
@@ -460,10 +483,10 @@ public class GUIController  extends JFrame {
         });
 		
 		// create close button
-		JMenuItem close_file_button = new JMenuItem("Close");
-		file_menu.add(close_file_button);
+		close_file_option = new JMenuItem("Close");
+		file_menu.add(close_file_option);
 		// close button action
-		close_file_button.addActionListener(new ActionListener() {
+		close_file_option.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				closeFileHelper();
@@ -480,11 +503,36 @@ public class GUIController  extends JFrame {
 		tabbed_pane.addChangeListener(new ChangeListener() {
 	        public void stateChanged(ChangeEvent e) {
 	        	if(inConfig) {
-	        		openConfigMenu();
+	        		if(tabbed_pane.getTabCount()>0) openConfigMenu();
 	        	}
+	        	toggleMenuOptions();
 	        }
 	    });
 		add(tabbed_pane, BorderLayout.CENTER);
+	}
+	
+	private void toggleMenuOptions() {
+    	// check if any tabs are open
+    	if(tabbed_pane.getTabCount() == 0 || ((TabWindow) tabbed_pane.getComponentAt(0)).is_config_window) {
+    		// make sure stuff is disabled
+    		save_file_option.setEnabled(false);
+    		run_option.setEnabled(false);
+    		close_file_option.setEnabled(false);
+    		cut_option.setEnabled(false);
+    		paste_option.setEnabled(false);
+    		copy_option.setEnabled(false);
+    		select_all_option.setEnabled(false);
+
+    	} else {
+    		// make sure stuff is enabled
+    		save_file_option.setEnabled(true);
+    		run_option.setEnabled(true);
+    		close_file_option.setEnabled(true);
+    		cut_option.setEnabled(true);
+    		paste_option.setEnabled(true);
+    		copy_option.setEnabled(true);
+    		select_all_option.setEnabled(true);
+    	}
 	}
 	
 	private void initEditMenu() {
@@ -533,14 +581,14 @@ public class GUIController  extends JFrame {
 		edit_menu.addSeparator();
 		
 		// create cut button
-		JMenuItem cut_button = new JMenuItem("Cut");
-		edit_menu.add(cut_button);
+		cut_option = new JMenuItem("Cut");
+		edit_menu.add(cut_option);
 		
 		// cut button accelerator (control-x)
-		cut_button.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X,KeyEvent.CTRL_DOWN_MASK));
+		cut_option.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_X,KeyEvent.CTRL_DOWN_MASK));
 		
 		// cut button action
-		cut_button.addActionListener(new ActionListener() {
+		cut_option.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (!(tabbed_pane.getTabCount()<=0)) {
@@ -551,14 +599,14 @@ public class GUIController  extends JFrame {
         });
 		
 		// create copy button
-		JMenuItem copy_button = new JMenuItem("Copy");
-		edit_menu.add(copy_button);
+		copy_option = new JMenuItem("Copy");
+		edit_menu.add(copy_option);
 		
 		// copy button accelerator (control-c)
-		copy_button.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C,KeyEvent.CTRL_DOWN_MASK));
+		copy_option.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_C,KeyEvent.CTRL_DOWN_MASK));
 		
 		// copy button action
-		copy_button.addActionListener(new ActionListener() {
+		copy_option.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (!(tabbed_pane.getTabCount()<=0)) {
@@ -569,14 +617,14 @@ public class GUIController  extends JFrame {
         });
 		
 		// create paste button
-		JMenuItem paste_button = new JMenuItem("Paste");
-		edit_menu.add(paste_button);
+		paste_option = new JMenuItem("Paste");
+		edit_menu.add(paste_option);
 		
 		// copy button accelerator (control-c)
-		paste_button.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_V,KeyEvent.CTRL_DOWN_MASK));
+		paste_option.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_V,KeyEvent.CTRL_DOWN_MASK));
 		
 		// copy button action
-		paste_button.addActionListener(new ActionListener() {
+		paste_option.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (!(tabbed_pane.getTabCount()<=0)) {
@@ -588,13 +636,13 @@ public class GUIController  extends JFrame {
 		edit_menu.addSeparator();
 		
 		// create select all button
-		JMenuItem select_all_button = new JMenuItem("Select All");
-		edit_menu.add(select_all_button);
+		select_all_option = new JMenuItem("Select All");
+		edit_menu.add(select_all_option);
 		
 		// save button accelerator (control-a)
-		select_all_button.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A,KeyEvent.CTRL_DOWN_MASK));
+		select_all_option.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_A,KeyEvent.CTRL_DOWN_MASK));
 		// save button action
-		select_all_button.addActionListener(new ActionListener() {
+		select_all_option.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (!(tabbed_pane.getTabCount()<=0)) {
@@ -621,30 +669,34 @@ public class GUIController  extends JFrame {
 	
 	static void closeSpellCheckWindow() {
 		TabWindow current_tab = get_current_tab();
-		current_tab.remove(current_tab.spell_check_sidebar);
-		current_tab.text_area.setEditable(true);
-		current_tab.text_area.getHighlighter().removeAllHighlights();
-		tabbed_pane.getParent().validate();
+		if(current_tab != null && !current_tab.is_config_window) {
+			current_tab.remove(current_tab.spell_check_sidebar);
+			current_tab.text_area.setEditable(true);
+			current_tab.text_area.getHighlighter().removeAllHighlights();
+			tabbed_pane.getParent().validate();
+		}
 	}
 	
 	static void openConfigMenu() {
-		closeSpellCheckWindow();
 		inConfig = true;
-		JPanel panel = (JPanel) (tabbed_pane.getSelectedComponent());
-		panel.add(config_menu,BorderLayout.EAST);
-		tabbed_pane.getParent().validate();
+		if (tabbed_pane.getTabCount() > 0) {
+			TabWindow panel = (TabWindow) (tabbed_pane.getSelectedComponent());
+			if(!panel.is_config_window)	closeSpellCheckWindow();
+			panel.add(config_menu,BorderLayout.EAST);
+			tabbed_pane.getParent().validate();
+		}
 	}
 	
 	static void closeConfigMenu() {
-		JPanel panel = (JPanel) (config_menu.getParent());
-		panel.remove(config_menu);
+		TabWindow panel = (TabWindow) (config_menu.getParent());
 		inConfig = false;
-		tabbed_pane.getParent().validate();
+		if(panel!=null) {
+			panel.remove(config_menu);
+			if(((TabWindow)tabbed_pane.getComponentAt(0)).is_config_window) tabbed_pane.remove(0);
+			tabbed_pane.getParent().validate();
+		}
 	}
 	
-	
-	
-
 	
 	private void initSpellCheckMenu() {
 		// create spell check menu
@@ -652,14 +704,14 @@ public class GUIController  extends JFrame {
 		spellcheck_menu.setMnemonic(KeyEvent.VK_S);
 		
 		// run button
-		JMenuItem run_button = new JMenuItem("Run");
-		spellcheck_menu.add(run_button);
+		run_option = new JMenuItem("Run");
+		spellcheck_menu.add(run_option);
 		
 		// run button accelerator (F7)
-		run_button.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F7,0));
+		run_option.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_F7,0));
 		
 		// run button action
-		run_button.addActionListener(new ActionListener() {
+		run_option.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (!(tabbed_pane.getTabCount()<=0)) {
@@ -674,20 +726,20 @@ public class GUIController  extends JFrame {
         });
 		
 		// configure tab
-		JMenuItem config_button = new JMenuItem("Configure");
-		config_button.setMnemonic(KeyEvent.VK_C);
-		spellcheck_menu.add(config_button);
+		config_option = new JMenuItem("Configure");
+		config_option.setMnemonic(KeyEvent.VK_C);
+		spellcheck_menu.add(config_option);
 		
 		// config button action
-		config_button.addActionListener(new ActionListener() {
+		config_option.addActionListener(new ActionListener() {
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				if (!(tabbed_pane.getTabCount()<=0)) {
-					openConfigMenu();
-				} else {
-	    			JOptionPane.showMessageDialog(GUIController.tabbed_pane, "Cannot perform action\nMust have a tab open.",
-	    					"No tab open...", JOptionPane.WARNING_MESSAGE);
+				if(tabbed_pane.getTabCount() == 0) {
+					TabWindow panel = new TabWindow();
+					panel.setLayout(new BorderLayout());
+					tabbed_pane.add("Configure", panel);
 				}
+				openConfigMenu();
 			}
         });
 				
@@ -702,6 +754,7 @@ public class GUIController  extends JFrame {
 		initEditMenu();
 		initTabbedPane();
 		initSpellCheckMenu();
+		toggleMenuOptions();
         setTitle("Evan's Text Editor");
         setSize(600, 400);
         setLocationRelativeTo(null);

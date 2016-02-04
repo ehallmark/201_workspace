@@ -10,6 +10,7 @@ import javax.swing.BorderFactory;
 import javax.swing.JButton;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.filechooser.FileNameExtensionFilter;
 
@@ -78,7 +79,12 @@ public class ConfigureWindow extends JPanel {
 			    if(file_chooser.showOpenDialog(GUIController.tabbed_pane) == JFileChooser.APPROVE_OPTION) {
 			    	File file = file_chooser.getSelectedFile();
 			    	// double check extension
-			    	if(!file.getName().endsWith(".kb")) { return; }
+			    	if(!file.getName().endsWith(".kb")) { 
+			    		//invalid file type
+						JOptionPane.showMessageDialog(GUIController.tabbed_pane, "Cannot perform action\nInvalid Keyboard file extension.",
+								"Warning...", JOptionPane.WARNING_MESSAGE);
+			    		return; 
+			    	}
 			    	// set file
 			    	GUIController.keyboard_file =  file_chooser.getSelectedFile();
 			    	keyboard_file_label.setText(GUIController.keyboard_file.getName());
@@ -98,7 +104,12 @@ public class ConfigureWindow extends JPanel {
 			    if(file_chooser.showOpenDialog(GUIController.tabbed_pane) == JFileChooser.APPROVE_OPTION) {
 			    	File file = file_chooser.getSelectedFile();
 			    	// double check extension
-			    	if(!file.getName().endsWith(".wl")) { return; }
+			    	if(!file.getName().endsWith(".wl")) { 
+			    		//invalid file type
+						JOptionPane.showMessageDialog(GUIController.tabbed_pane, "Cannot perform action\nInvalid WordList file extension.",
+								"Warning...", JOptionPane.WARNING_MESSAGE);
+			    		return; 
+			    	}
 			    	// set file
 			    	GUIController.wordlist_file =  file;
 			    	word_file_label.setText(GUIController.wordlist_file.getName());
