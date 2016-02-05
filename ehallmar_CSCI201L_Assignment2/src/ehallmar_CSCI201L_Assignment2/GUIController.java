@@ -228,7 +228,8 @@ public class GUIController  extends JFrame {
 				change_button = new JButton("Change");
 			    text_area = get_current_tab().text_area;
 			    highlight = text_area.getHighlighter();
-			    highlighter = new DefaultHighlighter.DefaultHighlightPainter(Color.CYAN);
+			    Color c = Color.LIGHT_GRAY;
+			    highlighter = new DefaultHighlighter.DefaultHighlightPainter(c);
 			    // explicitly set pointer to get buttons to behave
 			    _parent.spell_check_sidebar = this;
 			    
@@ -337,7 +338,12 @@ public class GUIController  extends JFrame {
 	    if(file_chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
 	    	// create new tab
 	    	File file = file_chooser.getSelectedFile();
-	    	if(!file.getName().endsWith(".txt")) { return; }
+	    	if(!file.getName().endsWith(".txt")) { 
+	    		// bad file extension
+				JOptionPane.showMessageDialog(GUIController.tabbed_pane, "Cannot perform action\nInvalid file extension.",
+						"Warning...", JOptionPane.WARNING_MESSAGE);
+	    		return; 
+	    	}
 	    	// check for previously open tab
 	    	for(Component c: tabbed_pane.getComponents()) {
 	    		TabWindow tab = (TabWindow) c;
@@ -647,6 +653,8 @@ public class GUIController  extends JFrame {
 			public void actionPerformed(ActionEvent e) {
 				if (!(tabbed_pane.getTabCount()<=0)) {
 					JTextArea current = get_current_tab().text_area;
+					//select text area before selecting all text
+					current.requestFocusInWindow();
 					current.selectAll();
 				}
 			}
