@@ -19,7 +19,7 @@ public class ChangeButtonListener extends IgnoreButtonListener {
 		int start = h.getStartOffset();
 		int end = h.getEndOffset();
 		text_area.replaceRange(selected,start,end);
-		spell_check_sidebar.text = text_area.getText();
+		spell_check_sidebar.text = text_area.getText().toLowerCase();
 		spell_check_sidebar.min_index -= (end-start);
 		if(selected!=null) spell_check_sidebar.min_index += selected.length();
 		// continue

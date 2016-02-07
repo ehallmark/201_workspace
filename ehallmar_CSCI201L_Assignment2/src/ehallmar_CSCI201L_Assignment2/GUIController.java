@@ -13,6 +13,8 @@ import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Scanner;
 import java.util.zip.DataFormatException;
@@ -128,12 +130,16 @@ public class GUIController  extends JFrame {
 			}
 			openSpellCheckWindow();
 			// check to make sure there are words to check
-		    String[] words = text.split("\\s");
-		    spell_check_sidebar.words = words;
+			text = text.toLowerCase();
+		    ArrayList<String> words = new ArrayList<String>(Arrays.asList(text.split("[.,\"':;!?()\\[\\]\\-\\s]")));
+		    while(words.contains(null)) words.remove(null);
+		    while(words.contains("")) words.remove("");
+		    spell_check_sidebar.words = new String[100];
+		    spell_check_sidebar.words = words.toArray(spell_check_sidebar.words);
 		    spell_check_sidebar.text = text;
 			// try to get word corrections from spell checker
 			try {
-				spell_check_sidebar.word_corrections = Controller.spellCheck(wordlist_file.getAbsolutePath(),keyboard_file.getAbsolutePath(),text);
+				spell_check_sidebar.word_corrections = Controller.spellCheck(wordlist_file.getAbsolutePath(),keyboard_file.getAbsolutePath(),words);
 			} catch (FileNotFoundException e) {
 				// File not found
 				JOptionPane.showMessageDialog(this, "Cannot perform action\nProblem finding configuration files.",
@@ -170,19 +176,45 @@ public class GUIController  extends JFrame {
 			if (spell_check_sidebar.word_index<spell_check_sidebar.words.length) { 
 				word = spell_check_sidebar.words[spell_check_sidebar.word_index];
 			} 
-			if(word!=null && spell_check_sidebar.word_corrections.containsKey(word.toLowerCase())) {
+			if(word!=null && spell_check_sidebar.word_corrections.containsKey(word.trim().replaceAll("[^a-zA-Z\\s]", "").toLowerCase())) {
 				spell_check_sidebar.spell_check_label.setText("Spelling: "+word);
 				spell_check_sidebar.combo_box.removeAllItems();
 				// make sure we get the whole word and not a prefix
-				if(!(spell_check_sidebar.min_index==0 && spell_check_sidebar.text.startsWith(word))) {
-					spell_check_sidebar.min_index=spell_check_sidebar.text.indexOf(" "+word+" ",Math.max(0,spell_check_sidebar.min_index-1))+1;
+				HashSet<Character> valid_separators = new HashSet<Character>();
+				for(char sep: " \n\t!?,:;.()[]{}-\"'".toCharArray()) {
+					valid_separators.add(sep);
 				}
-				// fallback
-				if(spell_check_sidebar.min_index<=0) {
+				boolean valid = false;
+				int counter = 0;
+				int starting_min_index = spell_check_sidebar.min_index;
+				while(!valid && counter <= (spell_check_sidebar.words.length-spell_check_sidebar.word_index)) {
+					counter++;
 					spell_check_sidebar.min_index=spell_check_sidebar.text.indexOf(word,spell_check_sidebar.min_index);
+					if(spell_check_sidebar.min_index>0) {
+						char previous = spell_check_sidebar.text.charAt(spell_check_sidebar.min_index-1);
+						if(!valid_separators.contains(previous)) {
+							// is a suffix -- not good
+							spell_check_sidebar.min_index+=1;
+							continue;
+						}
+					}
+					if(spell_check_sidebar.min_index+word.length()<spell_check_sidebar.text.length()) {
+						char next = spell_check_sidebar.text.charAt(spell_check_sidebar.min_index+word.length());
+						if(!valid_separators.contains(next)) {
+							// is a prefix -- not good
+							spell_check_sidebar.min_index+=1;
+							continue;
+						}
+					}
+					valid = true;
 				}
+				if(spell_check_sidebar.min_index<starting_min_index) {
+					// no word was found
+					spell_check_sidebar.min_index=spell_check_sidebar.text.length();
+				}
+				// check if nothing was found
 				int max_index = spell_check_sidebar.min_index+word.length();
-				for(String suggestion: spell_check_sidebar.word_corrections.get(word.toLowerCase())) {
+				for(String suggestion: spell_check_sidebar.word_corrections.get(word.trim().replaceAll("[^a-zA-Z\\s]", "").toLowerCase())) {
 					spell_check_sidebar.combo_box.addItem(suggestion);
 				}
 				// unhighlight previous words

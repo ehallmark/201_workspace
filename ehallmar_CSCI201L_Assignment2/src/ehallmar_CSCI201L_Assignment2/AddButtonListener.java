@@ -33,7 +33,7 @@ public class AddButtonListener extends IgnoreButtonListener {
 			JOptionPane.showMessageDialog(GUIController.tabbed_pane, "Cannot perform action\nError updating WordList file.",
 					"Error...", JOptionPane.ERROR_MESSAGE);
 		} finally {
-			spell_check_sidebar.word_corrections.remove(word);
+			spell_check_sidebar.word_corrections.remove(word.toLowerCase());
 		}
 		
 		// continue

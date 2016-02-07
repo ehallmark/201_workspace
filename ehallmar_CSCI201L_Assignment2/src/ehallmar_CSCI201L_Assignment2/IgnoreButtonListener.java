@@ -24,6 +24,7 @@ public class IgnoreButtonListener implements ActionListener {
 		if(spell_check_sidebar.words.length<=spell_check_sidebar.word_index) {
 			// done
 			GUIController.closeSpellCheckWindow();
+			tab.getParent().getParent().revalidate();
 			return;
 		}
 		
@@ -31,6 +32,13 @@ public class IgnoreButtonListener implements ActionListener {
 		while(next_word == spell_check_sidebar.min_index && spell_check_sidebar.word_index<spell_check_sidebar.words.length) {
 			tab.nextWordCorrection();
 			spell_check_sidebar.word_index++;
+		}
+		// double check if we are done
+		if(spell_check_sidebar.words.length<=spell_check_sidebar.word_index) {
+			// done
+			GUIController.closeSpellCheckWindow();
+			tab.getParent().getParent().revalidate();
+			return;
 		}
 	}
 
