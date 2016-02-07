@@ -32,7 +32,7 @@ import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JTabbedPane;
-import javax.swing.JTextArea;
+import javax.swing.JTextPane;
 import javax.swing.KeyStroke;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.event.ChangeEvent;
@@ -82,7 +82,7 @@ public class GUIController extends JFrame {
 	// main tab window class
 	class TabWindow extends JPanel {
 		private static final long serialVersionUID = 1L;
-		JTextArea text_area;
+		JTextPane text_area;
 		File file;
 		SpellCheckSidebar spell_check_sidebar;
 		boolean is_config_window;
@@ -97,7 +97,7 @@ public class GUIController extends JFrame {
 			is_config_window = false;
 			file = f;
 			setLayout(new BorderLayout());
-			text_area = new JTextArea();
+			text_area = new JTextPane();
 			JScrollPane scroll_pane = new JScrollPane(text_area);
 			text_area.getDocument().addUndoableEditListener(undo_manager);
 			add(scroll_pane, BorderLayout.CENTER);
@@ -438,7 +438,7 @@ public class GUIController extends JFrame {
 		if (tabbed_pane.getTabCount() <= 0)
 			return;
 		TabWindow current_tab = get_current_tab();
-		JTextArea text = current_tab.text_area;
+		JTextPane text = current_tab.text_area;
 		FileWriter writer = null;
 		String filename = null;
 		try {
@@ -648,7 +648,7 @@ public class GUIController extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (!(tabbed_pane.getTabCount() <= 0)) {
-					JTextArea current = get_current_tab().text_area;
+					JTextPane current = get_current_tab().text_area;
 					current.cut();
 				}
 			}
@@ -666,7 +666,7 @@ public class GUIController extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (!(tabbed_pane.getTabCount() <= 0)) {
-					JTextArea current = get_current_tab().text_area;
+					JTextPane current = get_current_tab().text_area;
 					current.copy();
 				}
 			}
@@ -684,7 +684,7 @@ public class GUIController extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (!(tabbed_pane.getTabCount() <= 0)) {
-					JTextArea current = get_current_tab().text_area;
+					JTextPane current = get_current_tab().text_area;
 					current.paste();
 				}
 			}
@@ -702,7 +702,7 @@ public class GUIController extends JFrame {
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				if (!(tabbed_pane.getTabCount() <= 0)) {
-					JTextArea current = get_current_tab().text_area;
+					JTextPane current = get_current_tab().text_area;
 					// select text area before selecting all text
 					current.requestFocusInWindow();
 					current.selectAll();

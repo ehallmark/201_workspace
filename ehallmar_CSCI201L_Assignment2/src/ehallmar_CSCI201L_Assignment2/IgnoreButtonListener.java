@@ -3,14 +3,14 @@ package ehallmar_CSCI201L_Assignment2;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-import javax.swing.JTextArea;
+import javax.swing.JTextPane;
 
 import ehallmar_CSCI201L_Assignment2.GUIController.TabWindow;
 import ehallmar_CSCI201L_Assignment2.GUIController.TabWindow.SpellCheckSidebar;
 
 public class IgnoreButtonListener implements ActionListener {
 	public SpellCheckSidebar spell_check_sidebar;
-	public JTextArea text_area;
+	public JTextPane text_area;
 	public TabWindow tab;
 
 	public IgnoreButtonListener(TabWindow _tab) {
@@ -35,6 +35,18 @@ public class IgnoreButtonListener implements ActionListener {
 			tab.nextWordCorrection();
 			spell_check_sidebar.word_index++;
 		}
+		// adjust window if necessary
+		/*
+	    JScrollBar scroll_bar = scroll_pane.getVerticalScrollBar();
+	    scroll_bar.addAdjustmentListener(new AdjustmentListener() {
+			@Override
+			public void adjustmentValueChanged(AdjustmentEvent ae) {
+				// scroll horizontally
+				scroll_bar.scr
+				
+				
+			}
+	    });*/
 		// double check if we are done
 		if (spell_check_sidebar.words.length <= spell_check_sidebar.word_index) {
 			// done
