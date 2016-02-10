@@ -37,6 +37,8 @@ import javax.swing.KeyStroke;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.DefaultHighlighter;
@@ -59,7 +61,9 @@ public class GUIController extends JFrame {
 	static JTabbedPane tabbed_pane;
 	static boolean inConfig = false;
 	private static JMenuBar menu_bar;
-	private static UndoManager undo_manager;
+	private static JMenuItem undo_button;
+	private static JMenuItem redo_button;
+	private static JMenu edit_menu;
 	private static JMenuItem save_file_option;
 	private static JMenuItem config_option;
 	private static JMenuItem run_option;
@@ -70,8 +74,6 @@ public class GUIController extends JFrame {
 	private static JMenuItem close_file_option;
 
 	public GUIController() {
-		undo_manager = new UndoManager();
-
 		// Generate UI
 		generateUI();
 		// Display
@@ -85,6 +87,8 @@ public class GUIController extends JFrame {
 		JTextPane text_area;
 		File file;
 		SpellCheckSidebar spell_check_sidebar;
+		UndoManager undo_manager;
+		UndoListener undo_listener;
 		boolean is_config_window;
 
 		// empty constructor
@@ -99,10 +103,36 @@ public class GUIController extends JFrame {
 			setLayout(new BorderLayout());
 			text_area = new JTextPane();
 			JScrollPane scroll_pane = new JScrollPane(text_area);
+			undo_manager = new UndoManager();
 			text_area.getDocument().addUndoableEditListener(undo_manager);
+			text_area.getDocument().addDocumentListener(new DocumentListener() {
+
+				@Override
+				public void changedUpdate(DocumentEvent arg0) {
+					// make sure we can undo
+					manageEditOptions();
+				}
+
+				@Override
+				public void insertUpdate(DocumentEvent arg0) {
+					// make sure we can undo
+					manageEditOptions();
+				}
+
+				@Override
+				public void removeUpdate(DocumentEvent arg0) {
+					// make sure we can undo
+					manageEditOptions();
+				}
+				
+			});
+
 			add(scroll_pane, BorderLayout.CENTER);
 			scroll_pane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
-
+			
+			//undo listener stuff
+			undo_listener = new UndoListener();
+			
 			String tab_name = NEW_FILE_NAME;
 			if (file != null) {
 				// Get opened file name
@@ -115,6 +145,10 @@ public class GUIController extends JFrame {
 
 			// add spell check stuff
 			spell_check_sidebar = new SpellCheckSidebar(this);
+			
+			// make sure we have the right edit options showing
+			manageEditOptions();
+
 		}
 
 		private void runSpellCheck() {
@@ -239,7 +273,33 @@ public class GUIController extends JFrame {
 				revalidate();
 			}
 		}
+		
+		void manageEditOptions() {
+			if (undo_manager.canUndo() && text_area.isEditable() && !undo_button.isEnabled()) {
+				undo_button.setEnabled(true);
+			} else if ((!undo_manager.canUndo() || !text_area.isEditable()) && undo_button.isEnabled()) {
+				undo_button.setEnabled(false);
+			}
+			if (undo_manager.canRedo() && text_area.isEditable() && !redo_button.isEnabled()) {
+				redo_button.setEnabled(true);
+			} else if ((!undo_manager.canRedo() || !text_area.isEditable()) && redo_button.isEnabled()) {
+				redo_button.setEnabled(false);
+			}
+		}
+		
+		// undo listener class
+		public class UndoListener implements ChangeListener {
 
+			UndoListener() {
+				super();
+			}
+
+			@Override
+			public void stateChanged(ChangeEvent e) {
+				manageEditOptions();
+			}
+		}
+		
 		// Spell check class
 		class SpellCheckSidebar extends JPanel {
 			private static final long serialVersionUID = 1L;
@@ -338,6 +398,21 @@ public class GUIController extends JFrame {
 				combo_box.removeAllItems();
 			}
 		} // end of spell check class
+
+		void redoActionPerformed() {
+			if (undo_manager.canRedo()) {
+				undo_manager.redo();
+			}
+			manageEditOptions();
+		}
+
+		void undoActionPerformed() {
+			if (undo_manager.canUndo()) {
+				undo_manager.undo();
+			}	
+			manageEditOptions();
+		}
+
 	} // end of main tab class
 
 	private TabWindow get_last_tab() {
@@ -558,12 +633,38 @@ public class GUIController extends JFrame {
 		tabbed_pane.addChangeListener(new ChangeListener() {
 			public void stateChanged(ChangeEvent e) {
 				if (inConfig) {
-					if (tabbed_pane.getTabCount() > 0)
+					if (tabbed_pane.getTabCount() > 0) {
 						openConfigMenu();
+					}
 				}
+				// remove tab dependent change listeners
+				for(ChangeListener cl: edit_menu.getChangeListeners()) {
+					edit_menu.removeChangeListener(cl);
+				}
+				for(ActionListener al: undo_button.getActionListeners()) {
+					undo_button.removeActionListener(al);
+				}
+				for(ActionListener al: redo_button.getActionListeners()) {
+					redo_button.removeActionListener(al);
+				}
+				
+				// enable the edit listeners
+				enableEditOptions();
+				
+				// make sure we have default set of no listeners 
+				if(edit_menu.getChangeListeners().length==0) {
+					redo_button.setEnabled(false);
+					undo_button.setEnabled(false);
+				}
+				// make sure other menu options are enabled/disabled accordingly
 				toggleMenuOptions();
 			}
 		});
+		// make sure we have default set of no listeners 
+		if(edit_menu.getChangeListeners().length==0) {
+			redo_button.setEnabled(false);
+			undo_button.setEnabled(false);
+		}
 		add(tabbed_pane, BorderLayout.CENTER);
 	}
 
@@ -588,51 +689,28 @@ public class GUIController extends JFrame {
 			paste_option.setEnabled(true);
 			copy_option.setEnabled(true);
 			select_all_option.setEnabled(true);
+			get_current_tab().manageEditOptions();
 		}
 	}
 
 	private void initEditMenu() {
 		// create edit menu
-		JMenu edit_menu = new JMenu("Edit");
+		edit_menu = new JMenu("Edit");
 		edit_menu.setMnemonic(KeyEvent.VK_E);
 
 		// create undo button
-		JMenuItem undo_button = new JMenuItem("Undo");
+		undo_button = new JMenuItem("Undo");
 		edit_menu.add(undo_button);
 
 		// undo button accelerator (control-z)
 		undo_button.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Z, KeyEvent.CTRL_DOWN_MASK));
 
-		// undo button action
-		undo_button.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				if (undo_manager.canUndo()) {
-					undo_manager.undo();
-				}
-			}
-		});
-
 		// create redo button
-		JMenuItem redo_button = new JMenuItem("Redo");
+		redo_button = new JMenuItem("Redo");
 		edit_menu.add(redo_button);
 
 		// redo button accelerator (control-y)
 		redo_button.setAccelerator(KeyStroke.getKeyStroke(KeyEvent.VK_Y, KeyEvent.CTRL_DOWN_MASK));
-
-		// redo button action
-		redo_button.addActionListener(new ActionListener() {
-			@Override
-			public void actionPerformed(ActionEvent e) {
-				if (undo_manager.canRedo()) {
-					undo_manager.redo();
-				}
-			}
-		});
-
-		// Enable/disable redo and edit
-		UndoListener listener = new UndoListener(undo_button, redo_button, undo_manager);
-		edit_menu.addChangeListener(listener);
 
 		edit_menu.addSeparator();
 
@@ -722,6 +800,7 @@ public class GUIController extends JFrame {
 		current_tab.add(current_tab.spell_check_sidebar, BorderLayout.EAST);
 		current_tab.text_area.setEditable(false);
 		current_tab.text_area.getHighlighter().removeAllHighlights();
+		current_tab.manageEditOptions();
 		validate();
 	}
 
@@ -729,10 +808,36 @@ public class GUIController extends JFrame {
 		TabWindow current_tab = get_current_tab();
 		if (current_tab != null && !current_tab.is_config_window) {
 			current_tab.remove(current_tab.spell_check_sidebar);
+			current_tab.manageEditOptions();
 			current_tab.text_area.setEditable(true);
 			current_tab.text_area.getHighlighter().removeAllHighlights();
 			tabbed_pane.getParent().validate();
 		}
+	}
+
+	private static void enableEditOptions() {
+		if(tabbed_pane.getTabCount() > 0) {
+			TabWindow tw = (TabWindow) tabbed_pane.getSelectedComponent();
+			if(!tw.is_config_window) {
+				// add the good stuff
+				edit_menu.addChangeListener(tw.undo_listener);
+				// undo button action
+				undo_button.addActionListener(new ActionListener() {
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						tw.undoActionPerformed();
+					}
+				});
+				//redo button action
+				redo_button.addActionListener(new ActionListener() {
+					@Override
+					public void actionPerformed(ActionEvent e) {
+						tw.redoActionPerformed();
+					}
+				});
+				
+			}
+		}		
 	}
 
 	static void openConfigMenu() {
