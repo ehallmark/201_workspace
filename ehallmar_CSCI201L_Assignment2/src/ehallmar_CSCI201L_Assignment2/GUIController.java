@@ -7,6 +7,8 @@ import java.awt.Font;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.FocusEvent;
+import java.awt.event.FocusListener;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -103,6 +105,26 @@ public class GUIController extends JFrame {
 			setLayout(new BorderLayout());
 			text_area = new JTextPane();
 			JScrollPane scroll_pane = new JScrollPane(text_area);
+			// add text if opened window (before adding undo listener)
+			if(file!=null) {
+				String text = "";
+				Scanner scanner = null;
+				try {
+					scanner = new Scanner(file);
+					while (scanner.hasNextLine()) {
+						text += scanner.nextLine() + '\n';
+					}
+					text_area.setText(text);
+				} catch (FileNotFoundException e) {
+					// Uh oh
+					JOptionPane.showMessageDialog(this, "Cannot perform action\n" + file.getName() + " not found.",
+							"File not found...", JOptionPane.ERROR_MESSAGE);
+					return;
+				} finally {
+					if (scanner != null)
+						scanner.close();
+				}
+			}
 			undo_manager = new UndoManager();
 			text_area.getDocument().addUndoableEditListener(undo_manager);
 			text_area.getDocument().addDocumentListener(new DocumentListener() {
@@ -123,6 +145,19 @@ public class GUIController extends JFrame {
 				public void removeUpdate(DocumentEvent arg0) {
 					// make sure we can undo
 					manageEditOptions();
+				}
+				
+			});
+			text_area.addFocusListener(new FocusListener() {
+
+				@Override
+				public void focusGained(FocusEvent arg0) {
+					// make sure we can undo
+					manageEditOptions();					
+				}
+
+				@Override
+				public void focusLost(FocusEvent e) {
 				}
 				
 			});
@@ -401,6 +436,7 @@ public class GUIController extends JFrame {
 
 		void redoActionPerformed() {
 			if (undo_manager.canRedo()) {
+				text_area.requestFocusInWindow();
 				undo_manager.redo();
 			}
 			manageEditOptions();
@@ -408,16 +444,13 @@ public class GUIController extends JFrame {
 
 		void undoActionPerformed() {
 			if (undo_manager.canUndo()) {
+				text_area.requestFocusInWindow();
 				undo_manager.undo();
 			}	
 			manageEditOptions();
 		}
 
 	} // end of main tab class
-
-	private TabWindow get_last_tab() {
-		return (TabWindow) tabbed_pane.getComponentAt(tabbed_pane.getTabCount() - 1);
-	}
 
 	private static TabWindow get_current_tab() {
 		return (TabWindow) tabbed_pane.getSelectedComponent();
@@ -472,23 +505,6 @@ public class GUIController extends JFrame {
 				}
 			}
 			createTab(file);
-			String text = "";
-			Scanner scanner = null;
-			try {
-				scanner = new Scanner(file);
-				while (scanner.hasNextLine()) {
-					text += scanner.nextLine() + '\n';
-				}
-				get_last_tab().text_area.setText(text);
-			} catch (FileNotFoundException e) {
-				// Uh oh
-				JOptionPane.showMessageDialog(this, "Cannot perform action\n" + file.getName() + " not found.",
-						"File not found...", JOptionPane.ERROR_MESSAGE);
-				return;
-			} finally {
-				if (scanner != null)
-					scanner.close();
-			}
 		}
 	}
 
@@ -811,6 +827,7 @@ public class GUIController extends JFrame {
 			current_tab.manageEditOptions();
 			current_tab.text_area.setEditable(true);
 			current_tab.text_area.getHighlighter().removeAllHighlights();
+			current_tab.undo_manager.discardAllEdits();
 			tabbed_pane.getParent().validate();
 		}
 	}
