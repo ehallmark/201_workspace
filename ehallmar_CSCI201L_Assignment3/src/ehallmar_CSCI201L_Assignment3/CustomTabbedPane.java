@@ -24,6 +24,10 @@ public class CustomTabbedPane extends JTabbedPane {
 		super.paintComponent(g);
 		// And then draw logo if no tabs open
 		if (this.getTabCount()==0) {
+			// draw background
+			g.setColor(Color.GRAY);
+			g.fillRect(this.getX(), this.getY(), this.getWidth(), this.getHeight());
+			// draw logo
 			g.setColor(GUIController.LOGO_COLOR);
 			g.setFont(font);
 			FontMetrics fm = g.getFontMetrics();

@@ -24,10 +24,10 @@ public class MainController {
 		     UIManager.put("Menu.font", default_font.deriveFont(14f));
 		     UIManager.put("TabbedPane.font", default_font);
 		     UIManager.put("Label.font", default_font);
-		     UIManager.put("Button.font", default_font);
-		     UIManager.put("ComboBox.font", default_font);
+		     UIManager.put("Button.font", default_font.deriveFont(11f));
+		     UIManager.put("ComboBox.font", default_font.deriveFont(11f));
 		     UIManager.put("TextPane.font", default_font);
-		     UIManager.put("TitledBorder.font", default_font.deriveFont(12f));
+		     UIManager.put("TitledBorder.font", default_font.deriveFont(11f));
 		     GUIController.DEFAULT_FONT = default_font;
 
 		} catch (IOException|FontFormatException e) {

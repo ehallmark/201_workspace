@@ -389,7 +389,8 @@ public class GUIController extends JFrame {
 				
 				spell_check_label = new JLabel("Spelling: ");
 				Font font = spell_check_label.getFont();
-				spell_check_label.setFont(font.deriveFont((float) 18));
+				spell_check_label.setFont(font.deriveFont((float) 13));
+				spell_check_label.setHorizontalAlignment(JLabel.CENTER);
 				
 				add_button = new JButton("Add");
 				add_button.setUI(new CustomButtonUI(add_button));
@@ -431,14 +432,17 @@ public class GUIController extends JFrame {
 				JPanel second_row = new JPanel();
 				JPanel third_row = new JPanel();
 				GridLayout row_layout = new GridLayout(1, 2);
+				row_layout.setHgap(5);
 				second_row.setLayout(row_layout);
 				third_row.setLayout(row_layout);
 				GridLayout grid = new GridLayout(3, 1);
 				grid.setVgap(10);
 				main_panel.setLayout(grid);
-				// border
+				// border and background
 				main_panel.setBorder(BorderFactory.createTitledBorder("Spell Check"));
 				main_panel.setBackground(BACKGROUND_COLOR);
+				second_row.setBackground(BACKGROUND_COLOR);
+				third_row.setBackground(BACKGROUND_COLOR);
 
 				// add main panel
 				add(main_panel, BorderLayout.NORTH);
@@ -1037,7 +1041,7 @@ public class GUIController extends JFrame {
 		initSpellCheckMenu();
 		toggleMenuOptions();
 		setTitle("Evan's Text Editor");
-		setSize(600, 400);
+		setSize(800,500);
 		setLocationRelativeTo(null);
 		setDefaultCloseOperation(EXIT_ON_CLOSE);
 		// assignment 3
