@@ -1,12 +1,14 @@
 package server;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 
 import javax.swing.UIManager;
 
-public class MainController {
+public class ServerController {
 
 	public static void main(String[] args) {
 		try {
@@ -23,14 +25,9 @@ public class MainController {
     	try {
         
     		String f = "config/server.properties";
-    		is = MainController.class.getClassLoader().getResourceAsStream(f);
-    		if(is==null){
-    	            // Unable to find file
-    		    return;
-    		}
-
-    		//load
-    		config.load(is);
+    		is = new FileInputStream(new File(f)); 
+    		
+    		if(is!=null) config.load(is);
  
     	} catch (IOException ex) {
     		// Error loading config file
@@ -46,21 +43,14 @@ public class MainController {
     	
     	// Make sure we have properties
     	Integer port = null;
-    	String host = null;
     	
     	try {
     		port = Integer.parseInt(config.getProperty("port"));
     	} catch (Exception e) {
     		// Bad port argument
     	}
-    	
-    	try {
-    		host = config.getProperty("host");
-    	} catch (Exception e) {
-    		// Bad port argument
-    	}
 		
-		ServerWindow server = new ServerWindow(port, host);
+		ServerWindow server = new ServerWindow(port);
 		server.setVisible(true);
 	}
 

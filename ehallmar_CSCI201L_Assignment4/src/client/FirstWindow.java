@@ -15,6 +15,7 @@ import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JLabel;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import javax.swing.JPasswordField;
 import javax.swing.JTextField;
@@ -27,9 +28,11 @@ public class FirstWindow extends JPanel {
 	private LoginPanel loginPanel;
 	private DefaultPanel defaultPanel;
 	private JPanel panelHolder;
+	private GUIController gui;
 	
 	
-	FirstWindow() {
+	FirstWindow(GUIController gui) {
+		this.gui = gui;
 		setLayout(new GridLayout(2,1));
 		font = GUIController.DEFAULT_FONT.deriveFont(22f);
 
@@ -190,7 +193,69 @@ public class FirstWindow extends JPanel {
 			btnHolder.add(login);
 			grid.add(btnHolder);
 			
+			// Button actions
+			login.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent ae) {
+					String user = username.getText();
+					String pass = String.copyValueOf(password.getPassword());
+					String passConf = String.copyValueOf(passwordConfirmation.getPassword());
+					boolean isValid = true;
+					if(user == null || user.trim().length() == 0) {
+						JOptionPane.showMessageDialog(FirstWindow.this, "Please include a username",
+								"Sign-up Failed", JOptionPane.WARNING_MESSAGE);
+						return;						
+					}
+					
+					// validate username
+					if(user.replaceAll("[a-zA-Z0-9]", "").length() > 0) {
+						JOptionPane.showMessageDialog(FirstWindow.this, "Username must contain only:\nAlphanumeric characters",
+								"Sign-up Failed", JOptionPane.WARNING_MESSAGE);
+						return;	
+					}
+					
+					if (pass != null && passConf != null) {
+						if(pass.equals(pass.toLowerCase())) isValid = false;
+						if(!pass.equals(passConf)) {
+							JOptionPane.showMessageDialog(FirstWindow.this, "Passwords do not match",
+									"Sign-up Failed", JOptionPane.WARNING_MESSAGE);
+							return;	
+						}
+
+						
+					} else {
+						JOptionPane.showMessageDialog(FirstWindow.this, "Please include:\n Password and Password Confirmation",
+								"Sign-up Failed", JOptionPane.WARNING_MESSAGE);
+						return;	
+	
+					}
+					
+					if(!isValid) {
+						JOptionPane.showMessageDialog(FirstWindow.this, "Password must contain at least:\n1-Number 1-Uppercase Letter",
+								"Sign-up Failed", JOptionPane.WARNING_MESSAGE);
+						return;
+					}
+					
+					
+					// try to connect to server
+					Thread t = new Thread() {
+						
+						@Override
+						public void run() {
+							// SEt up request
+							gui.new ClientThread(FirstWindow.this, user, pass);
+						}
+					};
+					
+					t.start();
+				}
+				
+			});
+			
 			add(grid);
+			
+			
 		}
 		
 		
@@ -247,4 +312,5 @@ public class FirstWindow extends JPanel {
 		
 		
 	}
+
 }

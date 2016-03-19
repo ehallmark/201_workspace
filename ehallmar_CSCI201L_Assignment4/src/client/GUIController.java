@@ -19,6 +19,9 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -55,6 +58,7 @@ import javax.swing.text.Highlighter.HighlightPainter;
 import javax.swing.undo.UndoManager;
 
 import ehallmar_CSCI201L_Assignment1.Controller;
+import server.ServerResponse;
 
 public class GUIController extends JFrame {
 	private static final long serialVersionUID = 1L;
@@ -1061,9 +1065,88 @@ public class GUIController extends JFrame {
 		// assignment 3
 		initCursor();
 		initApplicationIcon();
-		firstWindow = new FirstWindow();
+		firstWindow = new FirstWindow(this);
 		showUserButtons();
 		this.getContentPane().setBackground(BACKGROUND_COLOR);
 	}
+	
+	void loginUser() {
+		remove(firstWindow);
+		generatePostLoginUI();
+		repaint();
+		revalidate();
+	}
+	
+	// Connection to server class
+	public class ClientThread extends Thread {
+
+		private ObjectInputStream ois;
+		private ObjectOutputStream oos;
+		private String username;
+		private String password;
+		Socket s;
+		
+		public ClientThread(FirstWindow firstWindow, String username, String password) {
+			this.username = username;
+			this.password = password;
+
+			this.start();
+			
+			while(true) { // Don't hog cpu
+				try {
+					Thread.sleep(200);
+				} catch (InterruptedException e) {
+
+				}
+			}
+			
+		}
+		
+		public void run() {
+			ServerResponse message = null;
+			try {
+				s = new Socket(MainController.getHost(), MainController.getPort());
+				oos = new ObjectOutputStream(s.getOutputStream());
+				ois = new ObjectInputStream(s.getInputStream());
+				sendMessage(new SignupRequest(username, encrypt(password)));
+				message = (ServerResponse) ois.readObject();
+
+
+			} catch (IOException e) {
+				JOptionPane.showMessageDialog(firstWindow, "Server cannot be reached.\nProgram in offline mode.", "Sign-up Failed", JOptionPane.WARNING_MESSAGE);
+
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			} finally {
+				try {
+					if (s != null) {
+						s.close();
+					}
+				} catch (IOException ioe) {
+					// Error closing from server connection
+				}
+			}
+			
+			if(message != null && !message.wasSuccessful()) {
+				JOptionPane.showMessageDialog(firstWindow, "Username or password is invalid.", "Log-in Failed", JOptionPane.ERROR_MESSAGE);
+				return;
+			}
+			
+			GUIController.this.loginUser();
+			
+		}
+		
+		public void sendMessage(Object message) throws IOException {
+			oos.writeObject(message);
+			oos.flush();		
+		}
+		
+		public String encrypt(String str) {
+	        return str;
+		}
+		
+	}
+
 
 }

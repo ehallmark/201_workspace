@@ -8,8 +8,13 @@ import javax.swing.text.StyledDocument;
 public class AppendDocument extends DefaultStyledDocument implements StyledDocument {
 	private static final long serialVersionUID = 1L;
 	
-	public void append(String str) throws BadLocationException {
-		insertString(getLength(), str, new SimpleAttributeSet());
+	public void append(String str) {
+		try {
+			insertString(getLength(), str.trim()+"\n", new SimpleAttributeSet());
+		} catch (BadLocationException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 
 }

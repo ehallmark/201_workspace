@@ -3,11 +3,37 @@ package client;
 import java.awt.Font;
 import java.awt.FontFormatException;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Properties;
 
 import javax.swing.UIManager;
 
 public class MainController {
+	private static boolean offline = true;
+	private static int port;
+	private static String host;
+	
+	public static String getHost() {
+		return host;
+	}
+	
+	public static int getPort() {
+		return port;
+	}
+	
+	public static void setIsOffline(boolean b) {
+		offline = b;
+	}
+	
+	public static boolean isOnline() {
+		return !offline;
+	}
+	
+	public static boolean isOffline() {
+		return offline;
+	}
 
 	public static void main(String[] args) {
 		try {
@@ -34,6 +60,46 @@ public class MainController {
 		     //Handle exception
 			// unable to find font :(
 		}
+		
+		// Parse CONFIG file
+
+    	Properties config = new Properties();
+    	InputStream is = null;
+    	
+    	try {
+        
+    		String f = "config/client.properties";
+    		is = new FileInputStream(new File(f)); 
+    		
+    		if(is!=null) config.load(is);
+ 
+    	} catch (IOException ex) {
+    		// Error loading config file
+        } finally{
+        	if(is!=null){
+        		try {
+        			is.close();
+        		} catch (IOException e) {
+        			// Error closing config file
+        		}	
+        	}
+        }
+    	
+    	// Make sure we have properties    	
+    	try {
+    		port = Integer.parseInt(config.getProperty("port"));
+    	} catch (Exception e) {
+    		// Bad port argument
+    		
+    	}
+    	
+    	try {
+    		host = config.getProperty("host");
+    	} catch (Exception e) {
+    		// Bad port argument
+    		System.out.println("Cannot find host");
+    	}
+		
 		GUIController controller = new GUIController();
 		controller.setVisible(true);
 	}
