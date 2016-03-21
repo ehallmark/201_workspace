@@ -14,6 +14,7 @@ import java.security.NoSuchAlgorithmException;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Vector;
 
@@ -51,33 +52,6 @@ public class ServerWindow extends JFrame {
 		
 		// Set up GUI
 		createServerGUI();
-		
-	}
-	
-	boolean insertUser(String username, String password) {
-		Connection connection = null;
-		try {
-			connection = DriverManager.getConnection(sqlUrl, sqlUsername, sqlPassword);
-		    System.out.println("Database connected!");
-			  // the mysql insert statement
-			String query = " insert into users (username, password)"
-					  + " values ('"+username+"','"+password+"')";
-			
-			PreparedStatement ps = connection.prepareStatement(query);
-			ps.execute();
-
-		} catch (Exception e) {
-			e.printStackTrace();
-		    return false;
-		} finally {
-			try {
-				if(connection!=null) connection.close();
-			} catch (SQLException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-		}
-		return true;
 		
 	}
 	
@@ -211,20 +185,16 @@ public class ServerWindow extends JFrame {
 
 		try {
 			while (true) {
-				System.out.println("waiting for connection...");
 				Socket s = ss.accept();
-				System.out.println("connection from " + s.getInetAddress());
 				ServerThread st = new ServerThread(s, this);
 				serverThreads.add(st);
 			}
 			
 		} catch (IOException ioe) {
 			// Connection lost
-			System.out.print("BAD Connection");
 
 		} catch (NoSuchAlgorithmException e) {
 			// TODO Auto-generated catch block
-			System.out.print("BAD KEY");
 		} finally {
 			if (ss != null) {
 				try {
@@ -239,5 +209,134 @@ public class ServerWindow extends JFrame {
 	public void removeServerThread(ServerThread st) {
 		serverThreads.remove(st);
 	}
+	
+	// SQL INTERACTIONS
+	
+	boolean insertUser(String username, String password) {
+		Connection connection = null;
+		try {
+			connection = DriverManager.getConnection(sqlUrl, sqlUsername, sqlPassword);
+			  // the mysql insert statement
+			String query = " insert into users (username, password)"
+					  + " values ('"+username+"','"+password+"')";
+			
+			PreparedStatement ps = connection.prepareStatement(query);
+			ps.execute();
 
+		} catch (Exception e) {
+		    return false;
+		} finally {
+			try {
+				if(connection!=null) connection.close();
+			} catch (SQLException e) {
+
+			}
+		}
+		return true;
+		
+	}
+
+	public boolean findUser(String username, String password) {
+		Connection connection = null;
+		boolean valid = false;
+		try {
+			connection = DriverManager.getConnection(sqlUrl, sqlUsername, sqlPassword);
+			  // the mysql insert statement
+			String query = " select * from users where username='"+username+"' and password='"+password+"' ";
+			
+			PreparedStatement ps = connection.prepareStatement(query);
+			ResultSet rs = ps.executeQuery();
+			valid = rs.next();
+
+		} catch (Exception e) {
+		    return false;
+		} finally {
+			try {
+				if(connection!=null) connection.close();
+			} catch (SQLException e) {
+
+			}
+		}
+		return valid;
+		
+	}
+	
+	boolean insertFile(String username, String filename, String filetext) {
+		Connection connection = null;
+		try {
+			connection = DriverManager.getConnection(sqlUrl, sqlUsername, sqlPassword);
+			  // the mysql insert statement
+			String query = " insert into files (username, filename, filetext)"
+					  + " values ('"+username+"','"+filename+"','"+filetext+"') ";
+			PreparedStatement ps = connection.prepareStatement(query);
+			ps.execute();
+
+		} catch (Exception e) {
+		    return false;
+		} finally {
+			try {
+				if(connection!=null) connection.close();
+			} catch (SQLException e) {
+
+			}
+		}
+		return true;
+		
+	}
+
+	public Vector<String> findFiles(String username) {
+		Vector<String> files = new Vector<String>();
+		Connection connection = null;
+		try {
+			connection = DriverManager.getConnection(sqlUrl, sqlUsername, sqlPassword);
+			  // the mysql insert statement
+			String query = " select filename from files where username='"+username+"' ";
+			
+			PreparedStatement ps = connection.prepareStatement(query);
+			ResultSet results = ps.executeQuery();
+			while(results.next()) {
+				// add filenames to files vector
+				files.add(results.getString(1));
+			}
+
+		} catch (Exception e) {
+
+		} finally {
+			try {
+				if(connection!=null) connection.close();
+			} catch (SQLException e) {
+
+			}
+		}
+		return files;
+		
+	}
+
+	public String getFileText(String username, String filename) {
+		String filetext = null;
+		Connection connection = null;
+		try {
+			connection = DriverManager.getConnection(sqlUrl, sqlUsername, sqlPassword);
+			  // the mysql insert statement
+			String query = " select filetext from files where username='"+username+"' and filename='"+filename+"' ";
+			
+			PreparedStatement ps = connection.prepareStatement(query);
+			ResultSet results = ps.executeQuery();
+			results.next(); 
+			// add filetext to files vector
+			filetext = results.getString(1);
+			
+
+		} catch (Exception e) {
+
+		} finally {
+			try {
+				if(connection!=null) connection.close();
+			} catch (SQLException e) {
+				
+			}
+		}
+		return filetext;
+		
+	}
 }

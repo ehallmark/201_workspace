@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Scanner;
+import java.util.Vector;
 import java.util.zip.DataFormatException;
 
 import javax.swing.BorderFactory;
@@ -58,6 +59,7 @@ import javax.swing.text.Highlighter.HighlightPainter;
 import javax.swing.undo.UndoManager;
 
 import ehallmar_CSCI201L_Assignment1.Controller;
+import server.FileResponse;
 import server.ServerResponse;
 
 public class GUIController extends JFrame {
@@ -116,7 +118,7 @@ public class GUIController extends JFrame {
 		SpellCheckSidebar spell_check_sidebar;
 		UndoManager undo_manager;
 		UndoListener undo_listener;
-		boolean is_config_window;
+		boolean is_config_window;		
 
 		// empty constructor
 		TabWindow() {
@@ -220,6 +222,85 @@ public class GUIController extends JFrame {
 			// make sure we have the right edit options showing
 			manageEditOptions();
 
+		}
+
+		public TabWindow(String filename, String filetext) {
+			is_config_window = false;
+			setLayout(new BorderLayout());
+			text_area = new JTextPane();
+			text_area.setSelectionColor(OFFSET_COLOR);
+			JScrollPane scroll_pane = new JScrollPane(text_area);
+			scroll_pane.setViewportView(text_area);
+			// add text if opened window (before adding undo listener)
+	
+			undo_manager = new UndoManager();
+			text_area.getDocument().addUndoableEditListener(undo_manager);
+			text_area.getDocument().addDocumentListener(new DocumentListener() {
+
+				@Override
+				public void changedUpdate(DocumentEvent arg0) {
+					// make sure we can undo
+					manageEditOptions();
+				}
+
+				@Override
+				public void insertUpdate(DocumentEvent arg0) {
+					// make sure we can undo
+					manageEditOptions();
+				}
+
+				@Override
+				public void removeUpdate(DocumentEvent arg0) {
+					// make sure we can undo
+					manageEditOptions();
+				}
+				
+			});
+			text_area.addFocusListener(new FocusListener() {
+
+				@Override
+				public void focusGained(FocusEvent arg0) {
+					// make sure we can undo
+					manageEditOptions();					
+				}
+
+				@Override
+				public void focusLost(FocusEvent e) {
+				}
+				
+			});
+			
+			text_area.setText(filetext);
+
+			add(scroll_pane, BorderLayout.CENTER);
+			
+			CustomVerticalScrollBar v_scroll_bar = new CustomVerticalScrollBar();
+			v_scroll_bar.setUI(v_scroll_bar.new CustomScrollUI());
+			scroll_pane.setVerticalScrollBar(v_scroll_bar);
+			scroll_pane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_ALWAYS);
+
+			CustomHorizontalScrollBar h_scroll_bar = new CustomHorizontalScrollBar();
+			h_scroll_bar.setUI(h_scroll_bar.new CustomScrollUI());
+			scroll_pane.setHorizontalScrollBar(h_scroll_bar);
+			scroll_pane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_AS_NEEDED);
+			//undo listener stuff
+			undo_listener = new UndoListener();
+			
+			String tab_name = NEW_FILE_NAME;
+			if (filename != null) {
+				// Get opened file name
+				tab_name = filename;
+			}
+
+			// add to tabbed pane
+			tabbed_pane.add(tab_name, this);
+			tabbed_pane.setSelectedIndex(tabbed_pane.getTabCount() - 1);
+
+			// add spell check stuff
+			spell_check_sidebar = new SpellCheckSidebar(this);
+			
+			// make sure we have the right edit options showing
+			manageEditOptions();
 		}
 
 		private void runSpellCheck() {
@@ -526,6 +607,17 @@ public class GUIController extends JFrame {
 		TabWindow tw = new TabWindow(file);
 		tw.text_area.requestFocusInWindow();
 	}
+	
+	// FOR CREATING TABS FROM SERVER
+	private void createTab(String filename, String filetext) {
+		// check if config window is open
+		if (tabbed_pane.getTabCount() > 0) {
+			closeConfigMenu();
+		}
+		// Instantiate new tab
+		TabWindow tw = new TabWindow(filename, filetext);
+		tw.text_area.requestFocusInWindow();
+	}
 
 	private void closeTab(int tab_index) {
 		if (tab_index >= 0 && tab_index < tabbed_pane.getTabCount()) {
@@ -546,10 +638,25 @@ public class GUIController extends JFrame {
 	}
 
 	private void newFileHelper() {
-		createTab(null);
+		File f = null;
+		createTab(f);
 	}
-
-	private void openFileHelper() {
+	
+	private void onlineOpenFileHelper() {
+		String[] options = { "Online", "Offline" };
+		int selected = JOptionPane.showOptionDialog(
+		               this, new JLabel("Where would you like to open the file?"),"Open...", JOptionPane.YES_NO_OPTION, 
+		               JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+		if(selected == JOptionPane.YES_OPTION && MainController.getUsername() != null) {
+			// Online
+			new OpenFileThread(MainController.getUsername());
+			
+		} else if (selected == JOptionPane.NO_OPTION) {
+			offlineOpenFileHelper();
+		}
+	}
+	
+	private void offlineOpenFileHelper() {
 		// Open file chooser
 		JFileChooser file_chooser = new JFileChooser();
 		file_chooser.setName("Open File...");
@@ -578,6 +685,14 @@ public class GUIController extends JFrame {
 		}
 	}
 
+	private void openFileHelper() {
+		if(MainController.isOnline()) {
+			onlineOpenFileHelper();
+		} else {
+			offlineOpenFileHelper();
+		}
+	}
+
 	private File createNewFileHelper(File file) {
 		// Open file chooser
 		JFileChooser file_chooser = new JFileChooser();
@@ -585,7 +700,6 @@ public class GUIController extends JFrame {
 		file_chooser.setAcceptAllFileFilterUsed(false);
 		if (file != null) {
 			file_chooser.setSelectedFile(file);
-			;
 		}
 		file_chooser.setFileFilter(new FileNameExtensionFilter("txt files (*.txt)", "txt"));
 		if (file_chooser.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
@@ -594,10 +708,9 @@ public class GUIController extends JFrame {
 		}
 		return null;
 	}
-
-	private void saveFileHelper() {
-		if (tabbed_pane.getTabCount() <= 0)
-			return;
+	
+	private void offlineSaveFileHelper() {
+		if (tabbed_pane.getTabCount() <= 0) return;
 		TabWindow current_tab = get_current_tab();
 		JTextPane text = current_tab.text_area;
 		FileWriter writer = null;
@@ -616,7 +729,7 @@ public class GUIController extends JFrame {
 			file = new File(filename);
 			if (!file.createNewFile()) {
 				// filename already exists, prompt user to confirm
-				int user_response = JOptionPane.showConfirmDialog(null,
+				int user_response = JOptionPane.showConfirmDialog(this,
 						file.getName() + " already exists\nDo you want to replace it?", "Confirm Save As",
 						JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
 				if (user_response == JOptionPane.NO_OPTION) {
@@ -628,6 +741,7 @@ public class GUIController extends JFrame {
 			writer = new FileWriter(file);
 			writer.write(text.getText());
 			tabbed_pane.setTitleAt(tabbed_pane.getSelectedIndex(), file.getName());
+			get_current_tab().file = file;
 		} catch (IOException e) {
 			JOptionPane.showMessageDialog(this, "Cannot perform action\nError writing to file.", "Error...",
 					JOptionPane.ERROR_MESSAGE);
@@ -640,6 +754,28 @@ public class GUIController extends JFrame {
 							JOptionPane.ERROR_MESSAGE);
 				}
 			}
+		}
+	}
+	
+	private void onlineSaveFileHelper() {
+		String[] options = { "Online", "Offline" };
+		int selected = JOptionPane.showOptionDialog(
+		               this, new JLabel("Where would you like to save the file?"),"Save...", JOptionPane.YES_NO_OPTION, 
+		               JOptionPane.QUESTION_MESSAGE, null, options, options[0]);
+		if(selected == JOptionPane.YES_OPTION) {
+			// Online
+			new SaveFileThread(MainController.getUsername(),get_current_tab().text_area.getText());
+			
+		} else if (selected == JOptionPane.NO_OPTION) {
+			offlineSaveFileHelper();
+		}
+	}
+
+	private void saveFileHelper() {
+		if(MainController.isOnline()) {
+			onlineSaveFileHelper();
+		} else {
+			offlineSaveFileHelper();
 		}
 	}
 
@@ -1070,15 +1206,20 @@ public class GUIController extends JFrame {
 		this.getContentPane().setBackground(BACKGROUND_COLOR);
 	}
 	
-	void loginUser() {
+	void loginUser(String username) {
+		MainController.setUsername(username);
 		remove(firstWindow);
 		generatePostLoginUI();
 		repaint();
 		revalidate();
 	}
 	
+	public String encrypt(String str) {
+        return str;
+	}
+	
 	// Connection to server class
-	public class ClientThread extends Thread {
+	public class LoginThread extends Thread {
 
 		private ObjectInputStream ois;
 		private ObjectOutputStream oos;
@@ -1086,7 +1227,77 @@ public class GUIController extends JFrame {
 		private String password;
 		Socket s;
 		
-		public ClientThread(FirstWindow firstWindow, String username, String password) {
+		public LoginThread(FirstWindow firstWindow, String username, String password) {
+			this.username = username;
+			this.password = password;
+
+			this.start();
+			
+			while(true) { // Don't hog cpu
+				try {
+					Thread.sleep(200);
+				} catch (InterruptedException e) {
+
+				}
+			}
+			
+		}
+		
+		public void run() {
+			ServerResponse message = null;
+			try {
+				s = new Socket(MainController.getHost(), MainController.getPort());
+				oos = new ObjectOutputStream(s.getOutputStream());
+				ois = new ObjectInputStream(s.getInputStream());
+				sendMessage(new LoginRequest(username, encrypt(password)));
+				message = (ServerResponse) ois.readObject();
+
+
+			} catch (IOException e) {
+				JOptionPane.showMessageDialog(firstWindow, "Server cannot be reached.\nProgram in offline mode.", "Sign-up Failed", JOptionPane.WARNING_MESSAGE);
+
+			} catch (ClassNotFoundException e) {
+				JOptionPane.showMessageDialog(firstWindow, "Server cannot be reached.\nProgram in offline mode.", "Sign-up Failed", JOptionPane.WARNING_MESSAGE);
+
+			} finally {
+				try {
+					if (s != null) {
+						s.close();
+					}
+				} catch (IOException ioe) {
+					// Error closing from server connection
+				}
+			}
+			
+			if(message != null && !message.wasSuccessful()) {
+				JOptionPane.showMessageDialog(firstWindow, "Username or password is invalid.", "Log-in Failed", JOptionPane.ERROR_MESSAGE);
+				return;
+			}
+			
+			if(message != null && message.wasSuccessful()) {
+				MainController.setOnline();
+			}
+			
+			GUIController.this.loginUser(username);
+			
+		}
+		
+		public void sendMessage(Object message) throws IOException {
+			oos.writeObject(message);
+			oos.flush();		
+		}
+	}
+	
+	// Connection to server class
+	public class SignupThread extends Thread {
+
+		private ObjectInputStream ois;
+		private ObjectOutputStream oos;
+		private String username;
+		private String password;
+		Socket s;
+		
+		public SignupThread(FirstWindow firstWindow, String username, String password) {
 			this.username = username;
 			this.password = password;
 
@@ -1116,8 +1327,8 @@ public class GUIController extends JFrame {
 				JOptionPane.showMessageDialog(firstWindow, "Server cannot be reached.\nProgram in offline mode.", "Sign-up Failed", JOptionPane.WARNING_MESSAGE);
 
 			} catch (ClassNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
+				JOptionPane.showMessageDialog(firstWindow, "Error reaching server.\nProgram in offline mode.", "Sign-up Failed", JOptionPane.WARNING_MESSAGE);
+
 			} finally {
 				try {
 					if (s != null) {
@@ -1133,7 +1344,11 @@ public class GUIController extends JFrame {
 				return;
 			}
 			
-			GUIController.this.loginUser();
+			if(message != null && message.wasSuccessful()) {
+				MainController.setOnline();
+			}
+			
+			GUIController.this.loginUser(username);
 			
 		}
 		
@@ -1142,11 +1357,313 @@ public class GUIController extends JFrame {
 			oos.flush();		
 		}
 		
-		public String encrypt(String str) {
-	        return str;
-		}
+
 		
 	}
+	
+	// Connection to server class
+	public class OpenFileThread extends Thread {
 
+		private ObjectInputStream ois;
+		private ObjectOutputStream oos;
+		private String username;
+		private boolean dontHog;
+		Socket s;
+		
+		public OpenFileThread(String username) {
+			this.username = username;
+			dontHog = true;
+			this.start();
+			
+			while(dontHog) { // Don't hog cpu
+				try {
+					Thread.sleep(200);
+				} catch (InterruptedException e) {
+
+				}
+			}
+			
+		}
+		
+		public void run() {
+			Vector<String> files = null;
+			try {
+				s = new Socket(MainController.getHost(), MainController.getPort());
+				oos = new ObjectOutputStream(s.getOutputStream());
+				ois = new ObjectInputStream(s.getInputStream());
+				sendMessage(new OpenFileRequest(username));
+
+				files = ((FileResponse) ois.readObject()).getFiles();
+
+
+			} catch (IOException e) {
+				JOptionPane.showMessageDialog(firstWindow, "Unable to connect to the server.", "", JOptionPane.ERROR_MESSAGE);
+
+			} catch (ClassNotFoundException e) {
+				JOptionPane.showMessageDialog(firstWindow, "Error connecting to the server.", "", JOptionPane.ERROR_MESSAGE);
+
+			} finally {
+				try {
+					if (s != null) {
+						s.close();
+					}
+				} catch (IOException ioe) {
+					// Error closing from server connection
+				}
+			}
+			
+			// hog CPU since we have a pop up
+			dontHog = false;
+			
+			// Show filenames to user
+			if(files == null) return;
+			
+			CustomFileChooser fc = new CustomFileChooser(GUIController.this,"Open",files,null);
+			String selectedFile = fc.getSelectedFile();
+			if(selectedFile!=null) {
+				// Server request
+				new DownloadFileThread(username, selectedFile);
+			}
+		}
+		
+		public void sendMessage(Object message) throws IOException {
+			oos.writeObject(message);
+			oos.flush();		
+		}
+		
+
+		
+	}
+	
+	// Connection to server class
+	public class SaveFileThread extends Thread {
+
+		private ObjectInputStream ois;
+		private ObjectOutputStream oos;
+		private String username;
+		private String filetext;
+		private boolean dontHog;
+		Socket s;
+		
+		public SaveFileThread(String username, String filetext) {
+			this.username = username;
+			this.filetext = filetext;
+			
+			dontHog = true;
+			this.start();
+			
+			while(dontHog) { // Don't hog cpu
+				try {
+					Thread.sleep(200);
+				} catch (InterruptedException e) {
+
+				}
+			}
+			
+		}
+		
+		public void run() {
+			Vector<String> files = null;
+			try {
+				s = new Socket(MainController.getHost(), MainController.getPort());
+				oos = new ObjectOutputStream(s.getOutputStream());
+				ois = new ObjectInputStream(s.getInputStream());
+				sendMessage(new SaveFileRequest(username));
+
+				files = ((FileResponse) ois.readObject()).getFiles();
+
+
+			} catch (IOException e) {
+				JOptionPane.showMessageDialog(firstWindow, "Unable to connect to the server.", "", JOptionPane.ERROR_MESSAGE);
+
+			} catch (ClassNotFoundException e) {
+				JOptionPane.showMessageDialog(firstWindow, "Error connecting to the server.", "", JOptionPane.ERROR_MESSAGE);
+
+			} finally {
+				try {
+					if (s != null) {
+						s.close();
+					}
+				} catch (IOException ioe) {
+					// Error closing from server connection
+				}
+			}
+			
+			// hog CPU since we have a pop up
+			dontHog = false;
+			
+			// Show filenames to user
+			if(files == null) return;
+			String fileName = null;
+			if(get_current_tab().file != null) {
+				fileName = get_current_tab().file.getName();
+			}
+			CustomFileChooser fc = new CustomFileChooser(GUIController.this,"Save",files,fileName);
+			String selectedFile = fc.getSelectedFile();
+			if(selectedFile!=null) {
+				// Server request
+				new UploadFileThread(username, selectedFile, filetext);
+			}
+		}
+		
+		public void sendMessage(Object message) throws IOException {
+			oos.writeObject(message);
+			oos.flush();		
+		}
+		
+
+		
+	}
+	
+	// Connection to server class
+	public class UploadFileThread extends Thread {
+
+		private ObjectInputStream ois;
+		private ObjectOutputStream oos;
+		private String username;
+		private String filename;
+		private String filetext;
+		private boolean dontHog;
+		Socket s;
+		
+		public UploadFileThread(String username, String filename, String filetext) {
+			this.username = username;
+			this.filename = filename;
+			this.filetext = filetext;
+			
+			dontHog = true;
+			this.start();
+			
+			while(dontHog) { // Don't hog cpu
+				try {
+					Thread.sleep(200);
+				} catch (InterruptedException e) {
+
+				}
+			}
+			
+		}
+		
+		public void run() {
+			ServerResponse message = null;
+			try {
+				s = new Socket(MainController.getHost(), MainController.getPort());
+				oos = new ObjectOutputStream(s.getOutputStream());
+				ois = new ObjectInputStream(s.getInputStream());
+				sendMessage(new TextFile(username,filename,filetext));
+
+				message = (ServerResponse) ois.readObject();
+
+
+
+			} catch (IOException e) {
+				JOptionPane.showMessageDialog(firstWindow, "Unable to connect to the server.", "", JOptionPane.ERROR_MESSAGE);
+
+			} catch (ClassNotFoundException e) {
+				JOptionPane.showMessageDialog(firstWindow, "Error connecting to the server.", "", JOptionPane.ERROR_MESSAGE);
+
+			} finally {
+				try {
+					if (s != null) {
+						s.close();
+					}
+				} catch (IOException ioe) {
+					// Error closing from server connection
+				}
+			}
+			
+			// hog CPU since we have a pop up
+			dontHog = false;
+			
+			if(message != null && message.wasSuccessful()) {
+				JOptionPane.showMessageDialog(firstWindow, "File successfully saved.", "Message", JOptionPane.INFORMATION_MESSAGE);
+			} else {
+				JOptionPane.showMessageDialog(firstWindow, "File failed to save.", "Error", JOptionPane.ERROR_MESSAGE);
+
+			}
+			
+		}
+		
+		public void sendMessage(Object message) throws IOException {
+			oos.writeObject(message);
+			oos.flush();		
+		}
+		
+
+	}
+	
+	// Connection to server class
+	public class DownloadFileThread extends Thread {
+
+		private ObjectInputStream ois;
+		private ObjectOutputStream oos;
+		private String username;
+		private String filename;
+		private boolean dontHog;
+		Socket s;
+		
+		public DownloadFileThread(String username, String filename) {
+			this.username = username;
+			this.filename = filename;
+			
+			dontHog = true;
+			this.start();
+			
+			while(dontHog) { // Don't hog cpu
+				try {
+					Thread.sleep(200);
+				} catch (InterruptedException e) {
+
+				}
+			}
+			
+		}
+		
+		public void run() {
+			TextFile message = null;
+			try {
+				s = new Socket(MainController.getHost(), MainController.getPort());
+				oos = new ObjectOutputStream(s.getOutputStream());
+				ois = new ObjectInputStream(s.getInputStream());
+				sendMessage(new FileRequest(username,filename));
+
+				message = (TextFile) ois.readObject();
+
+
+
+			} catch (IOException e) {
+				JOptionPane.showMessageDialog(firstWindow, "Unable to connect to the server.", "", JOptionPane.ERROR_MESSAGE);
+
+			} catch (ClassNotFoundException e) {
+				JOptionPane.showMessageDialog(firstWindow, "Error connecting to the server.", "", JOptionPane.ERROR_MESSAGE);
+
+			} finally {
+				try {
+					if (s != null) {
+						s.close();
+					}
+				} catch (IOException ioe) {
+					// Error closing from server connection
+				}
+			}
+			
+			// hog CPU since we have a pop up
+			dontHog = false;
+			
+			if(!(message != null && message.getFiletext() != null)) {
+				JOptionPane.showMessageDialog(firstWindow, "File failed to open.", "Error", JOptionPane.ERROR_MESSAGE);
+			} else {
+				createTab(message.getFilename(),message.getFiletext());
+			}
+			
+		}
+		
+		public void sendMessage(Object message) throws IOException {
+			oos.writeObject(message);
+			oos.flush();		
+		}
+		
+
+	}
 
 }

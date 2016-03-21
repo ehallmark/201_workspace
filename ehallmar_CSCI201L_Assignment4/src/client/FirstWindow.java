@@ -10,6 +10,8 @@ import java.awt.Graphics;
 import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 
 import javax.swing.Box;
 import javax.swing.BoxLayout;
@@ -22,7 +24,7 @@ import javax.swing.JTextField;
 
 public class FirstWindow extends JPanel {
 	private static final long serialVersionUID = 1L;
-	private String name = "Evan's Text Editor";
+	private final String name = "Evan's Text Editor";
 	private Font font;
 	private SignupPanel signupPanel;
 	private LoginPanel loginPanel;
@@ -101,6 +103,8 @@ public class FirstWindow extends JPanel {
 				public void actionPerformed(ActionEvent ae) {
 					panelHolder.remove(defaultPanel);
 					panelHolder.add(loginPanel);
+					loginPanel.username.requestFocus();
+					loginPanel.username.requestFocusInWindow();
 					panelHolder.revalidate();
 				}
 				
@@ -112,7 +116,18 @@ public class FirstWindow extends JPanel {
 				public void actionPerformed(ActionEvent ae) {
 					panelHolder.remove(defaultPanel);
 					panelHolder.add(signupPanel);
+					signupPanel.username.requestFocus();
+					signupPanel.username.requestFocusInWindow();
 					panelHolder.revalidate();
+				}
+				
+			});
+			
+			offlineButton.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent ae) {
+					gui.loginUser(null);
 				}
 				
 			});
@@ -129,6 +144,20 @@ public class FirstWindow extends JPanel {
 
 		}
 		
+	}
+	
+	private class CustomKeyAdapter extends KeyAdapter {
+		JButton b;
+		CustomKeyAdapter(JButton b) {
+			this.b = b;
+		}
+		
+		@Override
+		public void keyPressed(KeyEvent ke) {
+			if(ke.getKeyCode()==KeyEvent.VK_ENTER) {
+				b.doClick();
+			}
+		}
 	}
 	
 	private class SignupPanel extends JPanel {
@@ -244,7 +273,7 @@ public class FirstWindow extends JPanel {
 						@Override
 						public void run() {
 							// SEt up request
-							gui.new ClientThread(FirstWindow.this, user, pass);
+							gui.new SignupThread(FirstWindow.this, user, pass);
 						}
 					};
 					
@@ -252,6 +281,10 @@ public class FirstWindow extends JPanel {
 				}
 				
 			});
+			
+			username.addKeyListener(new CustomKeyAdapter(login));
+			password.addKeyListener(new CustomKeyAdapter(login));
+			passwordConfirmation.addKeyListener(new CustomKeyAdapter(login));
 			
 			add(grid);
 			
@@ -307,7 +340,41 @@ public class FirstWindow extends JPanel {
 			btnHolder.add(login);
 			grid.add(btnHolder);
 			
+			// Button actions
+			login.addActionListener(new ActionListener() {
+
+				@Override
+				public void actionPerformed(ActionEvent ae) {
+					String user = username.getText();
+					String pass = String.copyValueOf(password.getPassword());
+
+					if(user == null || user.trim().length() == 0 || pass == null) {
+						JOptionPane.showMessageDialog(FirstWindow.this, "Please provide username and password",
+								"Log-in Failed", JOptionPane.ERROR_MESSAGE);
+						return;						
+					}
+
+					// try to connect to server
+					Thread t = new Thread() {
+						
+						@Override
+						public void run() {
+							// SEt up request
+							gui.new LoginThread(FirstWindow.this, user, pass);
+						}
+					};
+					
+					t.start();
+				}
+				
+			});
+			
+			username.addKeyListener(new CustomKeyAdapter(login));
+			password.addKeyListener(new CustomKeyAdapter(login));
+			
+			
 			add(grid);
+
 		}
 		
 		

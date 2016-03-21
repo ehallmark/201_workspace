@@ -11,9 +11,18 @@ import java.util.Properties;
 import javax.swing.UIManager;
 
 public class MainController {
-	private static boolean offline = true;
+	private static boolean onlineMode = false;
 	private static int port;
 	private static String host;
+	private static String username;
+	
+	public static String getUsername() {
+		return username;
+	}
+	
+	public static void setUsername(String username) {
+		MainController.username = username;
+	}
 	
 	public static String getHost() {
 		return host;
@@ -23,16 +32,16 @@ public class MainController {
 		return port;
 	}
 	
-	public static void setIsOffline(boolean b) {
-		offline = b;
+	public static void setOffline() {
+		onlineMode = false;
+	}
+	
+	public static void setOnline() {
+		onlineMode = true;
 	}
 	
 	public static boolean isOnline() {
-		return !offline;
-	}
-	
-	public static boolean isOffline() {
-		return offline;
+		return onlineMode;
 	}
 
 	public static void main(String[] args) {
@@ -47,6 +56,8 @@ public class MainController {
 		     UIManager.put("MenuItem.acceleratorFont", default_font.deriveFont(11f));
 		     UIManager.put("MenuItem.font", default_font);
 		     UIManager.put("MenuBar.font", default_font);
+		     UIManager.put("List.font", default_font);
+		     UIManager.put("ListItem.font", default_font);
 		     UIManager.put("Menu.font", default_font.deriveFont(14f));
 		     UIManager.put("TabbedPane.font", default_font);
 		     UIManager.put("Label.font", default_font);
